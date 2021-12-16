@@ -1,0 +1,472 @@
+<?xml version="1.0"?>
+<Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <PhysicalItems>
+      <PhysicalItem xsi:type="MyObjectBuilder_ToolItemDefinition">
+        <Id>
+          <TypeId>PhysicalGunObject</TypeId>
+          <SubtypeId>BlockFinderItem</SubtypeId>
+        </Id>
+        <Public>true</Public>
+        <DisplayName>Block Finder Item</DisplayName>
+        <Icon>Textures\GUI\Icons\WeaponWelder.dds</Icon>
+        <Size>
+          <X>0.1</X>
+          <Y>0.1</Y>
+          <Z>0.1</Z>
+        </Size>
+        <Mass>0.1</Mass>
+        <Volume>1</Volume>
+        <Model>Models\ImperialWelder_Small.mwm</Model>
+        <PhysicalMaterial>Metal</PhysicalMaterial>
+        <MinimumOfferAmount>10</MinimumOfferAmount>
+        <MaximumOfferAmount>20</MaximumOfferAmount>
+        <MinimumOrderAmount>10</MinimumOrderAmount>
+        <MaximumOrderAmount>100</MaximumOrderAmount>
+        <CanPlayerOrder>true</CanPlayerOrder>
+        <PrimaryActions>
+          <Action>
+            <!--<Name>Reward</Name>
+            <StartTime>0.3</StartTime>
+            <EndTime>0.53</EndTime>
+            <Efficiency>1</Efficiency>
+            <SwingSoundStart>0.2</SwingSoundStart>
+            <SwingSound></SwingSound>
+            <HitStart>0.1</HitStart>
+            <HitDuration>1</HitDuration>
+            <HitConditions>
+              <HitCondition>
+                <Animation>Thumb-Up</Animation>
+                <AnimationTimeScale>1.5</AnimationTimeScale>
+                <StatsAction>GoodAIControl</StatsAction>
+                <Component>Reward</Component>
+              </HitCondition>
+            </HitConditions>-->			
+          </Action>	
+        </PrimaryActions>
+        <SecondaryActions>
+          <Action>
+            <!--<Name>Punishment</Name>
+            <StartTime>0.3</StartTime>
+            <EndTime>0.53</EndTime>
+            <Efficiency>1</Efficiency>
+            <SwingSoundStart>0.2</SwingSoundStart>
+            <SwingSound></SwingSound>
+            <HitStart>0.1</HitStart>
+            <HitDuration>1</HitDuration>			
+            <HitConditions>
+              <HitCondition>
+                <Animation>FacePalm</Animation>
+                <Component>Punishment</Component>
+                <StatsAction>GoodAIControl</StatsAction>
+              </HitCondition>
+            </HitConditions>-->
+          </Action>
+        </SecondaryActions>
+        <HitDistance>0</HitDistance>
+      </PhysicalItem>
+
+      <!--<PhysicalItem>
+        <Id>
+          <TypeId>PhysicalGunObject</TypeId>
+          <SubtypeId>BlockFinderItem</SubtypeId>
+        </Id>
+        <Public>true</Public>
+        <DisplayName>Block Finder Tool</DisplayName>
+        <Icon>Textures\GUI\Icons\WeaponGrinder.dds</Icon>
+        <Description>Finds Working AI Blocks on an Enemy Grids</Description>
+        <Size>
+          <X>0.4</X>
+          <Y>0.2</Y>
+          <Z>0.1</Z>
+        </Size>
+        <Mass>5</Mass>
+        <Volume>8</Volume>
+        <Model>Models\AngleGrinder.mwm</Model>
+        <PhysicalMaterial>Metal</PhysicalMaterial>
+        <MinimumOfferAmount>10</MinimumOfferAmount>
+        <MaximumOfferAmount>20</MaximumOfferAmount>
+        <MinimumOrderAmount>10</MinimumOrderAmount>
+        <MaximumOrderAmount>100</MaximumOrderAmount>
+        <CanPlayerOrder>true</CanPlayerOrder>
+      </PhysicalItem>-->
+
+    </PhysicalItems>
+
+  <Blueprints>
+    <Blueprint>
+      <Id>
+        <TypeId>BlueprintDefinition</TypeId>
+        <SubtypeId>BlockFinder</SubtypeId>
+      </Id>
+      <DisplayName>Block Finder Tool</DisplayName>
+      <Icon>Textures\GUI\Icons\WeaponWelder.dds</Icon>
+      <Prerequisites>
+        <Item Amount="5" TypeId="Ingot" SubtypeId="Iron" />
+        <Item Amount="1" TypeId="Ingot" SubtypeId="Nickel" />
+        <Item Amount="3" TypeId="Ingot" SubtypeId="Stone" />
+        <Item Amount="3" TypeId="Ingot" SubtypeId="Silicon" />
+      </Prerequisites>
+      <Result Amount="1" TypeId="PhysicalGunObject" SubtypeId="BlockFinderItem" />
+      <BaseProductionTimeInSeconds>1</BaseProductionTimeInSeconds>
+      <IsPrimary>true</IsPrimary>
+    </Blueprint>
+  </Blueprints>
+
+  <BlueprintClasses>
+    <Class>
+      <Id>
+        <TypeId>BlueprintClassDefinition</TypeId>
+        <SubtypeId>BlockFinderTools</SubtypeId>
+      </Id>
+      <DisplayName>Block Finder</DisplayName>
+      <Description>Block Finder Tools</Description>
+      <Icon>Textures\GUI\Icons\buttons\tool.dds</Icon>
+      <HighlightIcon>Textures\GUI\Icons\buttons\tool.dds</HighlightIcon>
+      <FocusIcon>Textures\GUI\Icons\buttons\tool_focus.dds</FocusIcon>
+      <InputConstraintIcon>Textures\GUI\Icons\filter_ingot.dds</InputConstraintIcon>
+    </Class>
+  </BlueprintClasses>
+
+  <BlueprintClassEntries>
+    <Entry Class="Tools" BlueprintSubtypeId="BlockFinder" />
+    <Entry Class="BasicTools" BlueprintSubtypeId="BlockFinder" />
+    <Entry Class="EliteTools" BlueprintSubtypeId="BlockFinder" />
+    <Entry Class="BlockFinderTools" BlueprintSubtypeId="BlockFinder" />
+  </BlueprintClassEntries>
+
+  <CategoryClasses>
+    <Category xsi:type="MyObjectBuilder_GuiBlockCategoryDefinition">
+      <Id>
+        <TypeId>GuiBlockCategoryDefinition</TypeId>
+        <SubtypeId/>
+      </Id>
+      <DisplayName>DisplayName_Category_CharacterTools</DisplayName>
+      <Name>CharacterTools</Name>
+      <SearchBlocks>false</SearchBlocks>
+      <IsToolCategory>true</IsToolCategory>
+      <ItemIds>
+        <string>BlockFinderItem</string>
+      </ItemIds>
+    </Category>
+  </CategoryClasses>
+
+  <HandItems>
+
+    <!--<HandItem xsi:type="MyObjectBuilder_HandItemDefinition">
+      <Id Type="MyObjectBuilder_Welder" Subtype="BlockFinder" />
+      <LeftHandOrientation>
+        <X>-0.330544353</X>
+        <Y>-0.635530531</Y>
+        <Z>0.3367937</Z>
+        <W>0.611074</W>
+      </LeftHandOrientation>
+      <LeftHandPosition>
+        <X>-0.102846563</X>
+        <Y>0.15638113</Y>
+        <Z>-0.08030498</Z>
+      </LeftHandPosition>
+      <RightHandOrientation>
+        <X>0.7010493</X>
+        <Y>0.6759534</Y>
+        <Z>0.12503314</Z>
+        <W>-0.189693257</W>
+      </RightHandOrientation>
+      <RightHandPosition>
+        <X>0.115055323</X>
+        <Y>0.175323009</Y>
+        <Z>0.168</Z>
+      </RightHandPosition>
+      <ItemOrientation>
+        <X>0.387491375</X>
+        <Y>0.0292669013</Y>
+        <Z>0.425384939</Z>
+        <W>0.817338049</W>
+      </ItemOrientation>
+      <ItemPosition>
+        <X>0.175323009</X>
+        <Y>-0.241069615</Y>
+        <Z>-0.202718079</Z>
+      </ItemPosition>
+      <ItemWalkingOrientation>
+        <X>0.387491375</X>
+        <Y>0.0292669013</Y>
+        <Z>0.425384939</Z>
+        <W>0.817338049</W>
+      </ItemWalkingOrientation>
+      <ItemWalkingPosition>
+        <X>0.175323009</X>
+        <Y>-0.279421568</Y>
+        <Z>-0.202718079</Z>
+      </ItemWalkingPosition>
+      <ItemShootOrientation>
+        <X>0.315165877</X>
+        <Y>0.162989229</Y>
+        <Z>0.314519346</Z>
+        <W>0.8804445</W>
+      </ItemShootOrientation>
+      <ItemShootPosition>
+        <X>0.131491542</X>
+        <Y>-0.257506371</Y>
+        <Z>-0.2684642</Z>
+      </ItemShootPosition>
+      <ItemIronsightOrientation>
+        <X>0</X>
+        <Y>0</Y>
+        <Z>0</Z>
+        <W>1</W>
+      </ItemIronsightOrientation>
+      <ItemIronsightPosition>
+        <X>0</X>
+        <Y>0</Y>
+        <Z>0</Z>
+      </ItemIronsightPosition>
+      <ItemOrientation3rd>
+        <X>0.593253553</X>
+        <Y>0.347188234</Y>
+        <Z>0.3229745</Z>
+        <W>0.6505367</W>
+      </ItemOrientation3rd>
+      <ItemPosition3rd>
+        <X>0.0295847654</X>
+        <Y>-0.3143495</Y>
+        <Z>-0.221893877</Z>
+      </ItemPosition3rd>
+      <ItemWalkingOrientation3rd>
+        <X>0.6110044</X>
+        <Y>0.384372383</Y>
+        <Z>0.287985653</Z>
+        <W>0.629281938</W>
+      </ItemWalkingOrientation3rd>
+      <ItemWalkingPosition3rd>
+        <X>-0.0862925053</X>
+        <Y>-0.289694577</Y>
+        <Z>-0.110947408</Z>
+      </ItemWalkingPosition3rd>
+      <ItemShootOrientation3rd>
+        <X>0.405512482</X>
+        <Y>0.04562331</Y>
+        <Z>0.54020524</Z>
+        <W>0.7359731</W>
+      </ItemShootOrientation3rd>
+      <ItemShootPosition3rd>
+        <X>0.047701478</X>
+        <Y>-0.3188699</Y>
+        <Z>-0.391190529</Z>
+      </ItemShootPosition3rd>
+      <BlendTime>0.229567885</BlendTime>
+      <ShootBlend>0.200000018</ShootBlend>
+      <XAmplitudeOffset>0</XAmplitudeOffset>
+      <YAmplitudeOffset>0</YAmplitudeOffset>
+      <ZAmplitudeOffset>0</ZAmplitudeOffset>
+      <XAmplitudeScale>0.335355759</XAmplitudeScale>
+      <YAmplitudeScale>0.154091835</YAmplitudeScale>
+      <ZAmplitudeScale>0</ZAmplitudeScale>
+      <RunMultiplier>0.8089857</RunMultiplier>
+      <AmplitudeMultiplier3rd>1</AmplitudeMultiplier3rd>
+      <SimulateLeftHandFps xsi:nil="true" />
+      <SimulateRightHandFps xsi:nil="true" />
+      <FingersAnimation>HoldingTool</FingersAnimation>
+      <MuzzlePosition>
+        <X>0.03999996</X>
+        <Y>0</Y>
+        <Z>-0.279999971</Z>
+      </MuzzlePosition>
+      <ShootScatter>
+        <X>0.00525955064</X>
+        <Y>0.008546858</Y>
+        <Z>0.00525955064</Z>
+      </ShootScatter>
+      <ScatterSpeed>0.04141993</ScatterSpeed>
+      <PhysicalItemId Type="MyObjectBuilder_PhysicalGunObject" Subtype="BlockFinderItem" />
+      <LightColor>
+        <X>1</X>
+        <Y>0.7</Y>
+        <Z>0.5</Z>
+        <W>1</W>
+      </LightColor>
+      <LightFalloff>2</LightFalloff>
+      <LightRadius>10</LightRadius>
+      <LightGlareSize>0.068</LightGlareSize>
+      <LightGlareIntensity>0.25</LightGlareIntensity>
+      <LightIntensityLower>0.6</LightIntensityLower>
+      <LightIntensityUpper>0.7</LightIntensityUpper>
+      <ShakeAmountTarget>2.5</ShakeAmountTarget>
+      <ShakeAmountNoTarget>1</ShakeAmountNoTarget>
+      <ToolSounds>
+        <ToolSound type="Main" subtype="Idle" sound="ToolPlayGrindIdle" />
+        <ToolSound type="Main" subtype="Soundset" sound="Grinder" />
+      </ToolSounds>
+      <ToolMaterial>Grinder</ToolMaterial>
+      <ItemPositioning>TransformFromData</ItemPositioning>
+      <ItemPositioning3rd>TransformFromAnim</ItemPositioning3rd>
+      <ItemPositioningWalk>TransformFromData</ItemPositioningWalk>
+      <ItemPositioningWalk3rd>TransformFromAnim</ItemPositioningWalk3rd>
+      <ItemPositioningShoot>TransformFromData</ItemPositioningShoot>
+      <ItemPositioningShoot3rd>TransformFromAnim</ItemPositioningShoot3rd>
+      <ItemPositioningIronsight>TransformFromData</ItemPositioningIronsight>
+      <ItemPositioningIronsight3rd>TransformFromData</ItemPositioningIronsight3rd>
+      <Flare />
+    </HandItem>-->
+
+    <HandItem xsi:type="MyObjectBuilder_HandItemDefinition">
+      <Id Type="MyObjectBuilder_Welder" Subtype="BlockFinder" />
+      <LeftHandOrientation>
+        <X>-0.7071079</X>
+        <Y>-3.905624E-07</Y>
+        <Z>-1.68587789E-07</Z>
+        <W>0.7071056</W>
+      </LeftHandOrientation>
+      <LeftHandPosition>
+        <X>-0.08030445</X>
+        <Y>-0.114194907</Y>
+        <Z>-0.06793878</Z>
+      </LeftHandPosition>
+      <RightHandOrientation>
+        <X>-0.36548838</X>
+        <Y>-0.4869064</Y>
+        <Z>-0.5507983</Z>
+        <W>0.5709306</W>
+      </RightHandOrientation>
+      <RightHandPosition>
+        <X>0.021914959</X>
+        <Y>-0.062458396</Y>
+        <Z>0.120534658</Z>
+      </RightHandPosition>
+      <ItemOrientation>
+        <X>0</X>
+        <Y>0</Y>
+        <Z>0</Z>
+        <W>1</W>
+      </ItemOrientation>
+      <ItemPosition>
+        <X>0.100000024</X>
+        <Y>-0.18</Y>
+        <Z>-0.220000029</Z>
+      </ItemPosition>
+      <ItemWalkingOrientation>
+        <X>0</X>
+        <Y>0</Y>
+        <Z>0.1195997</Z>
+        <W>0.9928222</W>
+      </ItemWalkingOrientation>
+      <ItemWalkingPosition>
+        <X>0.1</X>
+        <Y>-0.218271181</Y>
+        <Z>-0.210783452</Z>
+      </ItemWalkingPosition>
+      <ItemShootOrientation>
+        <X>-0.119511753</X>
+        <Y>0</Y>
+        <Z>0</Z>
+        <W>0.9928328</W>
+      </ItemShootOrientation>
+      <ItemShootPosition>
+        <X>0.100000024</X>
+        <Y>-0.233399391</Y>
+        <Z>-0.338593721</Z>
+      </ItemShootPosition>
+      <ItemIronsightOrientation>
+        <X>0</X>
+        <Y>0</Y>
+        <Z>0</Z>
+        <W>1</W>
+      </ItemIronsightOrientation>
+      <ItemIronsightPosition>
+        <X>0</X>
+        <Y>0</Y>
+        <Z>0</Z>
+      </ItemIronsightPosition>
+      <ItemOrientation3rd>
+        <X>0</X>
+        <Y>0</Y>
+        <Z>0</Z>
+        <W>1</W>
+      </ItemOrientation3rd>
+      <ItemPosition3rd>
+        <X>0.1</X>
+        <Y>-0.18</Y>
+        <Z>-0.22</Z>
+      </ItemPosition3rd>
+      <ItemWalkingOrientation3rd>
+        <X>0</X>
+        <Y>0</Y>
+        <Z>0</Z>
+        <W>1</W>
+      </ItemWalkingOrientation3rd>
+      <ItemWalkingPosition3rd>
+        <X>0.186470717</X>
+        <Y>-0.322347462</Y>
+        <Z>-0.102630876</Z>
+      </ItemWalkingPosition3rd>
+      <ItemShootOrientation3rd>
+        <X>-0.180763185</X>
+        <Y>0</Y>
+        <Z>0</Z>
+        <W>0.983526647</W>
+      </ItemShootOrientation3rd>
+      <ItemShootPosition3rd>
+        <X>0.100000024</X>
+        <Y>-0.18</Y>
+        <Z>-0.318869</Z>
+      </ItemShootPosition3rd>
+      <BlendTime>0.15</BlendTime>
+      <ShootBlend>0.15</ShootBlend>
+      <XAmplitudeOffset>0</XAmplitudeOffset>
+      <YAmplitudeOffset>0</YAmplitudeOffset>
+      <ZAmplitudeOffset>0</ZAmplitudeOffset>
+      <XAmplitudeScale>0.300995946</XAmplitudeScale>
+      <YAmplitudeScale>0.5022766</YAmplitudeScale>
+      <ZAmplitudeScale>0</ZAmplitudeScale>
+      <RunMultiplier>2.47470331</RunMultiplier>
+      <AmplitudeMultiplier3rd>1</AmplitudeMultiplier3rd>
+      <SimulateLeftHand>false</SimulateLeftHand>
+      <SimulateLeftHandFps xsi:nil="true" />
+      <SimulateRightHandFps xsi:nil="true" />
+      <FingersAnimation>HoldingTool</FingersAnimation>
+      <MuzzlePosition>
+        <X>0</X>
+        <Y>0.190000057</Y>
+        <Z>-0.159999967</Z>
+      </MuzzlePosition>
+      <ShootScatter>
+        <X>0.133464769</X>
+        <Y>0.09072977</Y>
+        <Z>0.002</Z>
+      </ShootScatter>
+      <ScatterSpeed>0.376725733</ScatterSpeed>
+      <PhysicalItemId Type="MyObjectBuilder_PhysicalGunObject" Subtype="BlockFinderItem" />
+      <LightColor>
+        <X>0.7</X>
+        <Y>0.85</Y>
+        <Z>1</Z>
+        <W>1</W>
+      </LightColor>
+      <LightFalloff>2</LightFalloff>
+      <LightRadius>10</LightRadius>
+      <LightGlareSize>0.068</LightGlareSize>
+      <LightGlareIntensity>1</LightGlareIntensity>
+      <LightIntensityLower>0.6</LightIntensityLower>
+      <LightIntensityUpper>0.7</LightIntensityUpper>
+      <ShakeAmountTarget>0.2</ShakeAmountTarget>
+      <ShakeAmountNoTarget>0</ShakeAmountNoTarget>
+      <ToolSounds>
+        <ToolSound type="Main" subtype="Idle" sound="ToolPlayWeldIdle" />
+        <ToolSound type="Main" subtype="Weld" sound="ToolPlayWeldMetal" />
+        <ToolSound type="Main" subtype="Flame" sound="ToolPlayWeldIdle" />
+      </ToolSounds>
+      <ToolMaterial>Grinder</ToolMaterial>
+      <ItemPositioning>TransformFromAnim</ItemPositioning>
+      <ItemPositioning3rd>TransformFromAnim</ItemPositioning3rd>
+      <ItemPositioningWalk>TransformFromAnim</ItemPositioningWalk>
+      <ItemPositioningWalk3rd>TransformFromAnim</ItemPositioningWalk3rd>
+      <ItemPositioningShoot>TransformFromAnim</ItemPositioningShoot>
+      <ItemPositioningShoot3rd>TransformFromAnim</ItemPositioningShoot3rd>
+      <ItemPositioningIronsight>TransformFromData</ItemPositioningIronsight>
+      <ItemPositioningIronsight3rd>TransformFromData</ItemPositioningIronsight3rd>
+      <Flare />
+      <FlameEffect>WelderFlame</FlameEffect>
+    </HandItem>
+
+  </HandItems>
+
+</Definitions>

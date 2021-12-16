@@ -1,0 +1,221 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{792659D2-67D6-460D-A69B-D8510CD6881C}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>HostileTakeover</RootNamespace>
+    <AssemblyName>HostileTakeover</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="netstandard, Version=2.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\netstandard.dll</HintPath>
+    </Reference>
+    <Reference Include="ProtoBuf.Net">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\ProtoBuf.Net.dll</HintPath>
+    </Reference>
+    <Reference Include="ProtoBuf.Net.Core">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\ProtoBuf.Net.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Sandbox.Common">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\Sandbox.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="Sandbox.Game">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\Sandbox.Game.dll</HintPath>
+    </Reference>
+    <Reference Include="Sandbox.Graphics">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\Sandbox.Graphics.dll</HintPath>
+    </Reference>
+    <Reference Include="Sandbox.RenderDirect">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\Sandbox.RenderDirect.dll</HintPath>
+    </Reference>
+    <Reference Include="SpaceEngineers.Game">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\SpaceEngineers.Game.dll</HintPath>
+    </Reference>
+    <Reference Include="SpaceEngineers.ObjectBuilders">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\SpaceEngineers.ObjectBuilders.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="VRage">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Ansel">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Ansel.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Audio">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Audio.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Game">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Game.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Input">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Input.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Library">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Library.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Math">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Math.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Mod.Io">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Mod.Io.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.NativeWrapper">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.NativeWrapper.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Network">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Network.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Render">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Render.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Render11">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Render11.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Scripting">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Scripting.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Steam">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Steam.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.UserInterface">
+      <HintPath>..\..\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.UserInterface.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\BaseClasses\BaseGameLogicComp.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\BaseClasses\BaseLoggingClass.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\BaseClasses\BaseSessionComp.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\CommonCore.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Enums\CompType.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Enums\FactionRelationship.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Enums\LogType.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Factions\DataTypes\Enums\FactionTypes.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Factions\Models\FactionDictionaries.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Factions\Models\Settings.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Interfaces\ICommon.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Models\BufferedBinaryReader.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Models\FastQueue.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Reporting\GameSettings.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Settings.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\FileHandlers\Load.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\FileHandlers\Save.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Statics\Statics.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Statics\ThrusterCalculations.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Statics\VectorManipulations.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Tools\Logging\Log.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Tools\Logging\StaticLog.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Tools\Networking\ChatHandler.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Tools\Networking\MessageBase.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Tools\Networking\Messages\ExampleMessage.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Tools\Networking\Messaging.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Tools\OnScreenDisplay\QuestlogDetail.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Tools\OnScreenDisplay\QuestScreen.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Tools\Profiler.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\HostileTakeoverClientCore.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\HostileTakeoverServerCore.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Models\Constructs.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Models\HandTools.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\References\ImportantBlocks.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Models\OwnedGrids.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Mod\HostileTakeover\Data\AnimationControllers\AC_Astronaut.sbc" />
+    <None Include="Mod\HostileTakeover\Data\AnimationControllers\AC_Astronaut_Female.sbc" />
+    <None Include="Mod\HostileTakeover\Data\FinderToolDefinition.sbc" />
+    <None Include="Mod\HostileTakeover\Models\AngleGrinder.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Custom\AgAuCoFe-5.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Custom\FeCoAuPt-4.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Custom\FeNi-7.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Custom\FeNiAg-6.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Custom\FeNiCo-1.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Custom\FeSiNi-11.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Custom\FeStAg-3.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Custom\NiSi-10.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Custom\Si-2.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Custom\SiFe-8.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Custom\SiMg-9.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Scrap1.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Scrap10.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Scrap11.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Scrap2.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Scrap3.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Scrap4.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Scrap5.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Scrap6.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Scrap7.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Scrap8.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Components\Scrap9.mwm" />
+    <None Include="Mod\HostileTakeover\Models\ImperialWelder_Small.mwm" />
+    <None Include="Mod\HostileTakeover\Models\Welder.mwm" />
+    <None Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\format.xcf" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Mod\HostileTakeover\Models\Weapons\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\buttons\tool.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\buttons\tool_focus.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\bulletproof_glass.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\Cartridge_Icon.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\computer.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\construction_components.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\detector_components.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\display.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\explosives.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\field_emitter.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\girder.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\gravity_generator_components.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\interior_plate.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\large_steel_tube.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\medical_components.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\metal_grid.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\motor.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\power_cell.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\radio_communication_components.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\reactor_components.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\small_steel_tube.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\solar_cell.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\steel_plate.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\superconductor_conducts.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\thrust_components.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\filter_ingot.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\WeaponGrinder.dds" />
+    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\WeaponWelder.dds" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
