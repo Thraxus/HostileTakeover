@@ -1,4 +1,5 @@
-﻿namespace HostileTakeover.Common.Models
+﻿
+namespace HostileTakeover.Common.Models
 {
 	public class FastQueue<T>
 	{

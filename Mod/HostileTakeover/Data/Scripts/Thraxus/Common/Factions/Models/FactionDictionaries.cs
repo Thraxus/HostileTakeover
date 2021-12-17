@@ -66,7 +66,7 @@ namespace HostileTakeover.Common.Factions.Models
 			{
 				MyFactionDefinition def = MyDefinitionManager.Static.TryGetFactionDefinition(faction.Value.Tag);
 				if (def == null)
-				{	// Player faction, Vanilla Trader, or some other mods faction that creates everything in code and nothing in the .sbc
+				{   // Player faction, Vanilla Trader, or some other mods faction that creates everything in code and nothing in the .sbc
 					if (MyAPIGateway.Players.TryGetSteamId(faction.Value.FounderId) > 0)
 					{   // Player faction of some sort
 						if (Settings.PlayerFactionExclusionList.Any(x => faction.Value.Description.StartsWith(x)))
@@ -82,16 +82,16 @@ namespace HostileTakeover.Common.Factions.Models
 					VanillaTradeFactions.Add(faction.Key, faction.Value);
 					continue;
 				}
-				
+
 				if (Settings.FactionTags[FactionTypes.Neutral].Contains(def.Tag))
-				{  
+				{
 					LawfulFactions.Add(faction.Key, faction.Value);
 					NonTraderNpcFactions.Add(faction.Key, faction.Value);
 					continue;
 				}
 
 				if (Settings.FactionTags[FactionTypes.Enforcement].Contains(def.Tag))
-				{	
+				{
 					EnforcementFactions.Add(faction.Key, faction.Value);
 					NonTraderNpcFactions.Add(faction.Key, faction.Value);
 					continue;
@@ -141,13 +141,13 @@ namespace HostileTakeover.Common.Factions.Models
 			}
 
 			report.AppendLine();
-			
+
 			report.AppendLine("Pirate Factions");
 			foreach (var faction in PirateFactions)
 			{
 				report.AppendLine($"{x}{faction.Value.Tag}");
 			}
-			
+
 			report.AppendLine();
 
 			report.AppendLine("Vanilla Trader Factions");

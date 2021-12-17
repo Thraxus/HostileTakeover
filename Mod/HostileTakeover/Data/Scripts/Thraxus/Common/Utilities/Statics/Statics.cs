@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using HostileTakeover.Common.Enums;
-using HostileTakeover.Common.Utilities.Tools.Logging;
 using Sandbox.Game;
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
@@ -288,16 +288,24 @@ namespace HostileTakeover.Common.Utilities.Statics
 
 		#region Debug methods - should not be used in production code
 
-		public static void PrintTerminalActions(IMyEntity block)
+		public static string PrintTerminalActions(IMyEntity block)
 		{
 			IMyTerminalBlock myTerminalBlock = block as IMyTerminalBlock;
-			if (myTerminalBlock == null) return;
+			if (myTerminalBlock == null) return "";
 			List<ITerminalAction> results = new List<ITerminalAction>();
 			myTerminalBlock.GetActions(results);
+			StringBuilder sb = new StringBuilder();
+			sb.AppendLine();
+			sb.AppendLine();
+			sb.AppendFormat("{0,-2}Terminal Actions", " ");
+			sb.AppendLine();
 			foreach (ITerminalAction terminalAction in results)
 			{
-				StaticLog.WriteToLog("PrintTerminalActions", $"Actions: {terminalAction.Id} | {terminalAction.Name}", LogType.General);
+				sb.AppendFormat("{0,-4}[{1}]{2}", " ", terminalAction.Id, terminalAction.Name);
+				sb.AppendLine();
 			}
+			sb.AppendLine();
+			return sb.ToString();
 		}
 
 		public static void AddGpsLocation(string message, Vector3D location)

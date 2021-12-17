@@ -38,7 +38,7 @@ namespace HostileTakeover.Common.Utilities.Tools.Networking
 		/// <param name="fromServer">Does this message come from the server or no</param>
 		private static void MessageHandler(ushort id, byte[] message, ulong to, bool fromServer)
 		{
-			
+
 		}
 
 		private static void MessageHandler(byte[] bytes)

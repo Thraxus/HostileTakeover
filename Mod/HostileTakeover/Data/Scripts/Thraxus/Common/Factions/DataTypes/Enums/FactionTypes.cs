@@ -1,4 +1,5 @@
-﻿namespace HostileTakeover.Common.Factions.DataTypes.Enums
+﻿
+namespace HostileTakeover.Common.Factions.DataTypes.Enums
 {
 	public enum FactionTypes
 	{

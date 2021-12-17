@@ -1,8 +1,6 @@
 ﻿using System;
 using System.IO;
-using HostileTakeover.Common.Utilities.Tools.Networking;
 using Sandbox.ModAPI;
-using VRage.Game;
 
 namespace HostileTakeover.Common.Utilities.Tools.Logging
 {
@@ -12,7 +10,7 @@ namespace HostileTakeover.Common.Utilities.Tools.Logging
 
 		private TextWriter TextWriter { get; set; }
 
-		private static string TimeStamp => DateTime.Now.ToString("MMddyy-HH:mm:ss:ffff");
+		private static string TimeStamp => DateTime.Now.ToString("ddMMMyy_HH:mm:ss:ffff");
 
 		private const int DefaultIndent = 4;
 
@@ -37,16 +35,14 @@ namespace HostileTakeover.Common.Utilities.Tools.Logging
 			TextWriter = null;
 		}
 
-		public void WriteToLog(string caller, string message, bool showOnHud = false, int duration = Settings.DefaultLocalMessageDisplayTime, string color = MyFontEnum.Green)
+		public void WriteGeneral(string caller = "", string message = "")
 		{
 			BuildLogLine(caller, message);
-			if (!showOnHud) return;
-			BuildHudNotification(caller, message, duration, color);
 		}
-		
-		private static void BuildHudNotification(string caller, string message, int duration, string color)
+
+		public void WriteException(string caller = "", string message = "")
 		{
-			Messaging.ShowLocalNotification($"{caller}{Indent}{message}", duration, color);
+			BuildLogLine(caller, "Exception!\n\n" + message);
 		}
 
 		private readonly object _lockObject = new object();

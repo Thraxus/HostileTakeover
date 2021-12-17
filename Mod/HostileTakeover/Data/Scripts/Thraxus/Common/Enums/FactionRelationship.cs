@@ -1,8 +1,9 @@
-﻿namespace HostileTakeover.Common.Enums
+﻿
+namespace HostileTakeover.Common.Enums
 {
 	public enum FactionRelationship
 	{
-		Friends, 
+		Friends,
 		Enemies
 	}
 }

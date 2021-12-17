@@ -36,7 +36,7 @@ namespace HostileTakeover.Common.BaseClasses
 					return false;
 			}
 		}
-		
+
 		/// <summary>
 		///	 Amongst the earliest execution points, but not everything is available at this point.
 		///	 Main entry point: MyAPIGateway
@@ -59,7 +59,7 @@ namespace HostileTakeover.Common.BaseClasses
 		/// </summary>
 		/// <returns> Object builder for the session component </returns>
 		public override MyObjectBuilder_SessionComponent GetObjectBuilder()
-		{ 
+		{
 			return base.GetObjectBuilder();
 		}
 
@@ -68,7 +68,7 @@ namespace HostileTakeover.Common.BaseClasses
 		/// </summary>
 		public override void SaveData()
 		{
-			
+
 			base.SaveData();
 		}
 
@@ -76,7 +76,7 @@ namespace HostileTakeover.Common.BaseClasses
 		{
 			_superEarlySetupComplete = true;
 			_generalLog = new Log(CompName);
-			WriteToLog("SuperEarlySetup", $"Waking up.  Is Server: {Settings.IsServer}", LogType.General);
+			WriteGeneral("SuperEarlySetup", $"Waking up.  Is Server: {Settings.IsServer}");
 		}
 
 		/// <summary>
@@ -127,13 +127,13 @@ namespace HostileTakeover.Common.BaseClasses
 			if (TickCounter % (Settings.TicksPerSecond * 30) == 0) BeforeSimUpdate30Seconds();
 			if (TickCounter % (Settings.TicksPerMinute) == 0) BeforeSimUpdate1Minute();
 		}
-		
+
 		protected virtual void BeforeSimUpdate() { }
-		
+
 		protected virtual void BeforeSimUpdate2Ticks() { }
-		
+
 		protected virtual void BeforeSimUpdate5Ticks() { }
-		
+
 		protected virtual void BeforeSimUpdate10Ticks() { }
 
 		protected virtual void BeforeSimUpdateHalfSecond() { }
@@ -143,13 +143,13 @@ namespace HostileTakeover.Common.BaseClasses
 		protected virtual void BeforeSimUpdate30Seconds() { }
 
 		protected virtual void BeforeSimUpdate1Minute() { }
-		
+
 		protected virtual void LateSetup()
 		{
 			_lateSetupComplete = true;
 			if (UpdateOrder != Schedule)
 				MyAPIGateway.Utilities.InvokeOnGameThread(() => SetUpdateOrder(Schedule)); // sets the proper update schedule to the desired schedule
-			WriteToLog("LateSetup", $"Fully online.", LogType.General);
+			WriteGeneral("LateSetup", $"Fully online.");
 		}
 
 		/// <summary>
@@ -158,8 +158,20 @@ namespace HostileTakeover.Common.BaseClasses
 		public override void UpdateAfterSimulation()
 		{
 			if (BlockUpdates()) return;
+			AfterSimUpdate();
+            if (TickCounter % 2 == 0) AfterSimUpdate2Ticks();
+            if (TickCounter % 10 == 0) AfterSimUpdate5Ticks();
+            if (TickCounter % 20 == 0) AfterSimUpdate10Ticks();
 			base.UpdateAfterSimulation();
 		}
+
+        protected virtual void AfterSimUpdate() { }
+
+        protected virtual void AfterSimUpdate2Ticks() { }
+							   
+        protected virtual void AfterSimUpdate5Ticks() { }
+							   
+        protected virtual void AfterSimUpdate10Ticks() { }
 
 		protected override void UnloadData()
 		{
@@ -170,23 +182,8 @@ namespace HostileTakeover.Common.BaseClasses
 		protected virtual void Unload()
 		{
 			if (BlockUpdates()) return;
-			WriteToLog("Unload", $"Retired.", LogType.General);
+			WriteGeneral("Unload", $"Retired.");
 			_generalLog?.Close();
-		}
-
-		public void WriteToLog(string caller, string message, LogType type, bool showOnHud = false, int duration = Settings.DefaultLocalMessageDisplayTime, string color = MyFontEnum.Green)
-		{
-			switch (type)
-			{
-				case LogType.Exception:
-					WriteException(caller, message, showOnHud, duration, color);
-					return;
-				case LogType.General:
-					WriteGeneral(caller, message, showOnHud, duration, color);
-					return;
-				default:
-					return;
-			}
 		}
 
 		/// <summary>
@@ -194,7 +191,7 @@ namespace HostileTakeover.Common.BaseClasses
 		/// </summary>
 		public override void HandleInput()
 		{
-			
+
 		}
 
 		/// <summary>
@@ -220,22 +217,18 @@ namespace HostileTakeover.Common.BaseClasses
 		/// </summary>
 		public override void UpdatingStopped()
 		{
-			
+
 		}
 
-		private readonly object _writeLocker = new object();
 
-		private void WriteException(string caller, string message, bool showOnHud, int duration, string color)
+		public void WriteException(string caller, string message)
 		{
-			StaticLog.WriteToLog($"{CompName}: {caller}", $"Exception! {message}", LogType.Exception, showOnHud, duration, color);
+			_generalLog?.WriteException($"{CompName}: {caller}", message);
 		}
 
-		private void WriteGeneral(string caller, string message, bool showOnHud, int duration, string color)
+		public void WriteGeneral(string caller = "", string message = "")
 		{
-			lock (_writeLocker)
-			{
-				_generalLog?.WriteToLog($"{CompName}: {caller}", message, showOnHud, duration, color);
-			}
+			_generalLog?.WriteGeneral($"{CompName}: {caller}", message);
 		}
 	}
 }

@@ -15,10 +15,10 @@ namespace HostileTakeover.Common.Reporting
 			sb.AppendLine();
 			sb.AppendLine();
 			sb.AppendLine("Information Export Begin");
-			sb.AppendLine("═══════════════════════════════════════════");
+			sb.AppendLine("-------------------------------------------");
 			sb.AppendLine();
 			sb.AppendLine("Game Settings");
-			sb.AppendLine("═══════════════════════════════════════════");
+			sb.AppendLine("-------------------------------------------");
 			sb.AppendLine($"{x}Adaptive Sim Enabled: {MyAPIGateway.Session.SessionSettings.AdaptiveSimulationQuality}");
 			sb.AppendLine($"{x}Cargo Ships Enabled: {MyAPIGateway.Session.SessionSettings.CargoShipsEnabled}");
 			sb.AppendLine($"{x}Stop Grids Period (minutes): {MyAPIGateway.Session.SessionSettings.StopGridsPeriodMin}");
@@ -43,13 +43,13 @@ namespace HostileTakeover.Common.Reporting
 
 			sb.AppendLine();
 			sb.AppendLine("Installed Mods");
-			sb.AppendLine("═══════════════════════════════════════════");
+            sb.AppendLine("-------------------------------------------");
 			foreach (MyObjectBuilder_Checkpoint.ModItem mod in MyAPIGateway.Session.Mods)
 				sb.AppendLine($"{x}Name (Id): {mod} |Is a dependency: {mod.IsDependency}");
 
 			sb.AppendLine();
 			sb.AppendLine("Stored Identities");
-			sb.AppendLine("═══════════════════════════════════════════");
+            sb.AppendLine("-------------------------------------------");
 			List<IMyIdentity> identityList = new List<IMyIdentity>();
 			MyAPIGateway.Players.GetAllIdentites(identityList);
 			foreach (IMyIdentity identity in identityList)
@@ -57,13 +57,13 @@ namespace HostileTakeover.Common.Reporting
 
 			sb.AppendLine();
 			sb.AppendLine("Factions");
-			sb.AppendLine("═══════════════════════════════════════════");
+            sb.AppendLine("-------------------------------------------");
 			foreach (var faction in MyAPIGateway.Session.Factions.Factions)
 				sb.AppendLine($"{x}Name: {faction.Value.Name} |Tag: {faction.Value.Tag}");
 
 			sb.AppendLine();
 			sb.AppendLine("Information Export End");
-			sb.AppendLine("═══════════════════════════════════════════");
+            sb.AppendLine("-------------------------------------------");
 			return sb;
 		}
 	}

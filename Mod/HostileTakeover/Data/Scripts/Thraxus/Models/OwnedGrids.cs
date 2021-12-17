@@ -48,7 +48,7 @@ namespace HostileTakeover.Models
 			MyStringHash.GetOrCompute("SmallBlockCockpitIndustrial")
 		};
 		
-		protected sealed override string Id { get; } = "DisOwnership";
+		protected string Id = nameof(OwnedGrids);
 
 		private readonly ConcurrentCachingList<MyCubeBlock> _importantBlocks = new ConcurrentCachingList<MyCubeBlock>();
 		private readonly MyCubeGrid _thisGrid;
@@ -177,7 +177,7 @@ namespace HostileTakeover.Models
 		{
 			_importantBlocks.ApplyChanges();
 			if (_importantBlocks.Count > 0) return;
-			WriteToLog("CheckRemainingBlocks", $"Disowning Grid...", LogType.General);
+			WriteToLog("CheckRemainingBlocks", $"Disowning Grid...");
 			if (_thisGrid.MarkedForClose)
 			{	// TODO: Test this to make sure it's right.  Goal is to avoid the whole change ownership bit if the grid is closing.
 				Close();
@@ -192,7 +192,7 @@ namespace HostileTakeover.Models
 
 		public void Report()
 		{
-			WriteToLog("Report", $"Online: {!IsClosed} |Important Blocks: {_importantBlocks.Count}", LogType.General);
+			WriteToLog("Report", $"Online: {!IsClosed} |Important Blocks: {_importantBlocks.Count}");
 		}
 
 		public override void Close()
@@ -207,5 +207,10 @@ namespace HostileTakeover.Models
 			_importantBlocks.ClearList();
 			_importantBlocks.ApplyChanges();
 		}
+
+        public override void WriteToLog(string caller, string message)
+        {
+            base.WriteToLog($"[{Id}] {caller}", message);
+        }
 	}
 }

@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using HostileTakeover.Common.Enums;
-using HostileTakeover.Common.Utilities.Tools.Logging;
 
 namespace HostileTakeover.Common.Utilities.Tools
 {
@@ -26,11 +24,16 @@ namespace HostileTakeover.Common.Utilities.Tools
 			_start = Stopwatch.GetTimestamp();
 		}
 
-		public void Dispose()
+		public override string ToString()
 		{
 			long end = Stopwatch.GetTimestamp();
 			TimeSpan timespan = new TimeSpan(end - _start);
-			StaticLog.WriteToLog(_name, $"{timespan.TotalMilliseconds:0.##########}ms", LogType.General);
+			return _name + $"{timespan.TotalMilliseconds:0.##########}ms";
+		}
+
+		public void Dispose()
+		{
+
 		}
 	}
 }

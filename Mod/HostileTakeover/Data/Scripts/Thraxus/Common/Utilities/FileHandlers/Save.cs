@@ -6,7 +6,7 @@ namespace HostileTakeover.Common.Utilities.FileHandlers
 {
 	public static class Save
 	{
-		public static void WriteToBinaryFile<T>(string fileName, T data, Type type)
+		public static void WriteBinaryFileToWorldStorage<T>(string fileName, T data, Type type)
 		{
 			if (MyAPIGateway.Utilities.FileExistsInWorldStorage(fileName, type))
 				MyAPIGateway.Utilities.DeleteFileInWorldStorage(fileName, type);
@@ -21,7 +21,7 @@ namespace HostileTakeover.Common.Utilities.FileHandlers
 			}
 		}
 
-		public static void WriteToXmlFile<T>(string fileName, T data, Type type)
+		public static void WriteXmlFileToWorldStorage<T>(string fileName, T data, Type type)
 		{
 			if (MyAPIGateway.Utilities.FileExistsInWorldStorage(fileName, type))
 				MyAPIGateway.Utilities.DeleteFileInWorldStorage(fileName, type);
@@ -36,7 +36,7 @@ namespace HostileTakeover.Common.Utilities.FileHandlers
 			}
 		}
 
-		public static void WriteToFile<T>(string fileName, T data, Type type)
+		public static void WriteFileToWorldStorage<T>(string fileName, T data, Type type)
 		{
 			if (MyAPIGateway.Utilities.FileExistsInWorldStorage(fileName, type))
 				MyAPIGateway.Utilities.DeleteFileInWorldStorage(fileName, type);
@@ -51,7 +51,7 @@ namespace HostileTakeover.Common.Utilities.FileHandlers
 
 		public static void WriteToSandbox(Type T)
 		{
-			
+
 		}
 	}
 }
