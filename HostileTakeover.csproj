@@ -144,10 +144,8 @@
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Tools\OnScreenDisplay\QuestlogDetail.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Tools\OnScreenDisplay\QuestScreen.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Tools\Profiler.cs" />
-    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\HostileTakeoverClientCore.cs" />
-    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\HostileTakeoverServerCore.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\HostileTakeoverCore.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Models\Construct.cs" />
-    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Models\HandTools.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\References\ImportantBlocks.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Models\OwnedGrids.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

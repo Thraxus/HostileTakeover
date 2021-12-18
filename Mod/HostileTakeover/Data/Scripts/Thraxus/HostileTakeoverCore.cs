@@ -1,22 +1,26 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using HostileTakeover.Common.BaseClasses;
 using HostileTakeover.Common.Enums;
 using HostileTakeover.Common.Factions.Models;
-using HostileTakeover.Common.Interfaces;
 using HostileTakeover.Models;
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
+using Sandbox.ModAPI.Weapons;
 using VRage.Game.Components;
+using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 using VRage.ModAPI;
+using VRageMath;
+using static HostileTakeover.Common.Utilities.Statics.Statics;
 
 namespace HostileTakeover
 {
 	[MySessionComponentDescriptor(MyUpdateOrder.BeforeSimulation, priority: int.MinValue + 1)]
-    public class HostileTakeoverServerCore : BaseSessionComp
+    public class HostileTakeoverCore : BaseSessionComp
     {
-	    protected override string CompName { get; } = "HostileTakeoverServerCore";
+	    protected override string CompName { get; } = "HostileTakeoverCore";
 		protected override CompType Type { get; } = CompType.Server;
 		protected override MyUpdateOrder Schedule { get; } = MyUpdateOrder.BeforeSimulation | MyUpdateOrder.AfterSimulation;
 
@@ -34,73 +38,36 @@ namespace HostileTakeover
 
 		//private HandTools _handTools;
 
-		private void PopulateGridList(IMyCubeGrid thisGrid)
+        private void PopulateGridList(IMyCubeGrid thisGrid)
 		{
 			_reusableGridCollection.Clear();
 			MyAPIGateway.GridGroups.GetGroup(thisGrid, GridLinkTypeEnum.Mechanical, _reusableGridCollection);
-		}
+        }
 
 		protected override void SuperEarlySetup()
 		{
 			base.SuperEarlySetup();
 			MyAPIGateway.Entities.OnEntityAdd += OnEntityAdd;
-			//_handTools = new HandTools();
-			//_handTools.OnWriteToLog += WriteGeneral;
-			//_handTools.OnClose += HandToolsOnClose;
 		}
 
-		private void HandToolsOnClose(ICommon obj)
-		{
-			
-		}
-
-		protected override void LateSetup()
-		{
-			base.LateSetup();
+        protected override void BeforeSimUpdate()
+        {
+            base.BeforeSimUpdate();
+            if (_constructs.IsEmpty) return;
+            foreach (KeyValuePair<long, Construct> construct in _constructs)
+            {
+                construct.Value.ProcessPerTickActions();
+            }
 		}
 
         protected override void AfterSimUpdate()
         {
-            
             base.AfterSimUpdate();
-		}
-
-        protected override void AfterSimUpdate10Ticks()
-        {
-            if (_constructs.IsEmpty) return;
-            foreach (var construct in _constructs)
-            {
-                construct.Value.ProcessTickDelayedActions();
-            }
-			base.AfterSimUpdate10Ticks();
         }
 
-        protected override void Unload()
-		{
-			base.Unload();
-			//_handTools.Close();
-			//_handTools.OnWriteToLog -= WriteGeneral;
-			//_handTools.OnClose -= HandToolsOnClose;
-			MyAPIGateway.Entities.OnEntityAdd -= OnEntityAdd;
-			_constructQueue.Clear();
-		}
-
-		private void OnEntityAdd(IMyEntity entity)
-		{
-			MyCubeGrid grid = entity as MyCubeGrid;
-			if (grid == null) return;
-			_constructQueue.Enqueue(grid);
-			WriteGeneral(nameof(OnEntityAdd), $"Added: [{entity.EntityId}] {grid.DisplayName}");
-		}
-
-		protected override void BeforeSimUpdate()
-		{
-			base.BeforeSimUpdate();
-		}
-
-		public override void UpdateAfterSimulation()
-		{
-			base.UpdateAfterSimulation();
+		protected override void AfterSimUpdate2Ticks()
+        {
+            base.AfterSimUpdate2Ticks();
 			if (_constructQueue.Count < 1) return;
 			while (_constructQueue.Count > 0)
 			{   // Consider putting a catch in here to ensure that nothing makes this iterate more than x times. 
@@ -118,7 +85,7 @@ namespace HostileTakeover
 				// I have no owner, so don't give me one, asshole. 
 				if (grid.BigOwners.Count == 0)
 				{
-					// Consider not ignoring even if unowned.  It isn't owned now, but what about later?
+					// TODO Consider not ignoring even if unowned.  It isn't owned now, but what about later?
 					WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as UNOWNED: [{grid.EntityId}] {grid.DisplayName}");
 					continue;
 				}
@@ -144,13 +111,76 @@ namespace HostileTakeover
 				ulong id = MyAPIGateway.Players.TryGetSteamId(grid.BigOwners[0]);
 				if (id > 0)
 				{
-					// Consider not ignoring player grids.  What if they transfer ownership to a NPC?  Just disabling logic if player owned would be smarter.
+					// TODO Consider not ignoring player grids.  What if they transfer ownership to a NPC?  Just disabling logic if player owned would be smarter.
 					WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as PLAYER OWNED: [{grid.EntityId}] {grid.DisplayName}");
 					continue;
 				}
 				AddToOwnerships(grid);
 			}
 		}
+
+        protected override void AfterSimUpdate10Ticks()
+        {
+            base.AfterSimUpdate10Ticks();
+			if (_constructs.IsEmpty) return;
+            foreach (var construct in _constructs)
+            {
+                construct.Value.ProcessTickDelayedActions();
+            }
+        }
+
+        protected override void Unload()
+		{
+			base.Unload();
+			MyAPIGateway.Entities.OnEntityAdd -= OnEntityAdd;
+			_constructQueue.Clear();
+		}
+
+		private void OnEntityAdd(IMyEntity entity)
+		{
+			var grid = entity as MyCubeGrid;
+			if (grid != null)
+            {
+				RunNewGridLogic(grid);
+                return;
+            }
+            var grinder = entity as IMyAngleGrinder;
+            if (grinder == null) return;
+            RunGrinderLogic(grinder);
+        }
+
+        private void RunNewGridLogic(MyCubeGrid grid)
+        {
+            _constructQueue.Enqueue(grid);
+            WriteGeneral(nameof(RunNewGridLogic), $"New Grid: [{grid.EntityId}] {grid.DisplayName}");
+		}
+
+        private readonly List<MyEntity> _entList = new List<MyEntity>();
+
+        private List<MyEntity> GrabNearbyGrids(Vector3D center)
+        {
+            _entList.Clear();
+            BoundingSphereD pruneSphere = new BoundingSphereD(center, 200);
+            MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref pruneSphere, _entList);
+            for (int i = _entList.Count - 1; i >= 0; i--)
+            {
+                if (!(_entList[i] is MyCubeGrid))
+                    _entList.RemoveAtFast(i);
+                //WriteGeneral(nameof(GrabNearbyGrids), $"[{_entList[i].EntityId}] [[{_entList[i].GetType()}]");
+            }
+            return _entList;
+        }
+
+		private void RunGrinderLogic(IMyAngleGrinder grinder)
+        {
+            List<MyEntity> entList = GrabNearbyGrids(grinder.GetPosition());
+	        foreach (MyEntity target in entList)
+            {
+                AddGpsLocation($"[{target.EntityId}] {((MyCubeGrid)target).DisplayName}", target.PositionComp.GetPosition());
+				WriteGeneral(nameof(RunGrinderLogic), $"[{target.EntityId}] [{((MyCubeGrid)target).DisplayName}]");
+            }
+            WriteGeneral(nameof(RunGrinderLogic), $"Grinder: [{grinder.OwnerIdentityId}] [{grinder.OwnerId}] [{entList.Count()}]");
+        }
 
 		private void AddToOwnerships(MyCubeGrid grid)
 		{

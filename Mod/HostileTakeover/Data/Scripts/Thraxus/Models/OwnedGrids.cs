@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using HostileTakeover.Common.BaseClasses;
-using HostileTakeover.Common.Enums;
 using Sandbox.Common.ObjectBuilders;
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
@@ -16,6 +15,8 @@ namespace HostileTakeover.Models
 {
 	public class OwnedGrids : BaseLoggingClass
 	{
+		// NOTE: This is not currently being used - it was replaced by Construct, but code left for reference until mod is finished.
+
 		// TODO: Need to account for mines.  Perhaps disregard this if a grid is small and has a warhead? 
 		// TODO: Could also just make a warhead an important type... that doesn't sound like a bad idea really
 		// TODO: Test with "Military Station" encounter / SQUASH mines
