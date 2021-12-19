@@ -1,6 +1,6 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using HostileTakeover.Common.BaseClasses;
 using HostileTakeover.Common.Enums;
 using HostileTakeover.Common.Factions.Models;
@@ -13,7 +13,6 @@ using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 using VRage.ModAPI;
 using VRageMath;
-using static HostileTakeover.Common.Utilities.Statics.Statics;
 
 namespace HostileTakeover
 {
@@ -30,13 +29,18 @@ namespace HostileTakeover
 		// This collection is used to map all grids to the construct they belong to.  (long, long) => (whatever grid EntityId, construct key)
 		private readonly ConcurrentDictionary<long, long> _constructMap = new ConcurrentDictionary<long, long>();
 
+		/// <summary>
+		/// Holds a collection of generic actions to be fired at some specific time
+		/// </summary>
+		private readonly Queue<Action> _genericActionQueue = new Queue<Action>();
+
 		// We want to wait half a tick between the grid being picked up and processing it to allow subgrids to populate, so this queue grabs all 
 		//	grids OnEntityAdd and processes them the next AfterSimulation tick
 		private readonly Queue<MyCubeGrid> _constructQueue = new Queue<MyCubeGrid>();
 
-		private readonly HashSet<IMyCubeGrid> _reusableGridCollection = new HashSet<IMyCubeGrid>();
+		private readonly List<IMyCubeGrid> _reusableGridCollection = new List<IMyCubeGrid>();
 
-		//private HandTools _handTools;
+        private readonly List<MyEntity> _entList = new List<MyEntity>();
 
         private void PopulateGridList(IMyCubeGrid thisGrid)
 		{
@@ -60,75 +64,20 @@ namespace HostileTakeover
             }
 		}
 
-        protected override void AfterSimUpdate()
-        {
-            base.AfterSimUpdate();
-        }
-
-		protected override void AfterSimUpdate2Ticks()
-        {
-            base.AfterSimUpdate2Ticks();
-			if (_constructQueue.Count < 1) return;
-			while (_constructQueue.Count > 0)
-			{   // Consider putting a catch in here to ensure that nothing makes this iterate more than x times. 
-				MyCubeGrid grid = _constructQueue.Dequeue();
-
-				// I don't exist!  So why am I here...
-				if (grid == null)
-				{
-					WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as NULL.");
-					continue;
-				}
-
-				WriteGeneral(nameof(UpdateAfterSimulation), $"Processing: [{grid.EntityId}] {grid.DisplayName}");
-
-				// I have no owner, so don't give me one, asshole. 
-				if (grid.BigOwners.Count == 0)
-				{
-					// TODO Consider not ignoring even if unowned.  It isn't owned now, but what about later?
-					WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as UNOWNED: [{grid.EntityId}] {grid.DisplayName}");
-					continue;
-				}
-
-				// I'm a projection!  Begone fool! ...or lend me your... components.
-				if (grid.Physics == null)
-				{
-					WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as PROJECTION: [{grid.EntityId}] {grid.DisplayName}");
-					continue;
-				}
-
-				if (grid.IsStatic)
-				{
-					IMyFaction faction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(grid.BigOwners[0]);
-					if (faction == null) continue;
-					if (FactionDictionaries.VanillaTradeFactions.ContainsKey(faction.FactionId))
-					{
-						WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as VANILLA TRADE: [{grid.EntityId}] {grid.DisplayName}");
-						continue;
-					}
-				}
-				// Catches player owned grids and ignores them
-				ulong id = MyAPIGateway.Players.TryGetSteamId(grid.BigOwners[0]);
-				if (id > 0)
-				{
-					// TODO Consider not ignoring player grids.  What if they transfer ownership to a NPC?  Just disabling logic if player owned would be smarter.
-					WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as PLAYER OWNED: [{grid.EntityId}] {grid.DisplayName}");
-					continue;
-				}
-				AddToOwnerships(grid);
-			}
-		}
-
         protected override void AfterSimUpdate10Ticks()
         {
             base.AfterSimUpdate10Ticks();
-			if (_constructs.IsEmpty) return;
+            while (_genericActionQueue.Count > 0)
+            {
+                _genericActionQueue.Dequeue()?.Invoke();
+            }
+
             foreach (var construct in _constructs)
             {
                 construct.Value.ProcessTickDelayedActions();
             }
         }
-
+        
         protected override void Unload()
 		{
 			base.Unload();
@@ -141,32 +90,131 @@ namespace HostileTakeover
 			var grid = entity as MyCubeGrid;
 			if (grid != null)
             {
-				RunNewGridLogic(grid);
+                _genericActionQueue.Enqueue(() => RunNewGridLogic(grid));
                 return;
             }
             var grinder = entity as IMyAngleGrinder;
             if (grinder == null) return;
-            RunGrinderLogic(grinder);
+            _genericActionQueue.Enqueue(() => RunGrinderLogic(grinder));
         }
 
         private void RunNewGridLogic(MyCubeGrid grid)
         {
-            _constructQueue.Enqueue(grid);
+            // I don't exist!  So why am I here...
+            if (grid == null)
+            {
+                WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as NULL.");
+                return;
+            }
+
+            WriteGeneral(nameof(UpdateAfterSimulation), $"Processing: [{grid.EntityId}] {grid.DisplayName}");
+
+            // I have no owner, so don't give me one, asshole. 
+            if (grid.BigOwners.Count == 0)
+            {
+                // TODO Consider not ignoring even if unowned.  It isn't owned now, but what about later?
+                WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as UNOWNED: [{grid.EntityId}] {grid.DisplayName}");
+                return;
+            }
+
+            // I'm a projection!  Begone fool! ...or lend me your... components.
+            if (grid.Physics == null)
+            {
+                WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as PROJECTION: [{grid.EntityId}] {grid.DisplayName}");
+                return;
+            }
+
+            if (grid.IsStatic)
+            {
+                IMyFaction faction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(grid.BigOwners[0]);
+                if (faction == null) return;
+                if (FactionDictionaries.VanillaTradeFactions.ContainsKey(faction.FactionId))
+                {
+                    WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as VANILLA TRADE: [{grid.EntityId}] {grid.DisplayName}");
+                    return;
+                }
+            }
+            // Catches player owned grids and ignores them
+            ulong id = MyAPIGateway.Players.TryGetSteamId(grid.BigOwners[0]);
+            if (id > 0)
+            {
+                // TODO Consider not ignoring player grids.  What if they transfer ownership to a NPC?  Just disabling logic if player owned would be smarter.
+                WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as PLAYER OWNED: [{grid.EntityId}] {grid.DisplayName}");
+                return;
+            }
+            HandleConstruct(grid);
             WriteGeneral(nameof(RunNewGridLogic), $"New Grid: [{grid.EntityId}] {grid.DisplayName}");
 		}
 
-        private readonly List<MyEntity> _entList = new List<MyEntity>();
+        private void HandleConstruct(MyCubeGrid grid)
+        {
+            PopulateGridList(grid);
+            WriteGeneral(nameof(HandleConstruct), $"Attaching logic to: [{_reusableGridCollection.Count:00}] [{grid.EntityId}] {grid.DisplayName}");
+
+            if (_reusableGridCollection.Count == 1)
+            {
+                CreateNewConstruct(grid);
+                return;
+            }
+
+            // if parentEntity = 0, then this grid collection isn't mapped yet
+            // If parentEntity > 0, then this grid is part of a construct and needs to be mapped to it
+            long parentEntity = ValidateConstructExists();
+            
+            if (parentEntity == 0)
+            {
+                long primaryConstruct = 0;
+                for (int i = 0; i < _reusableGridCollection.Count; i++)
+                {
+                    if (i == 0)
+                    {
+                        primaryConstruct = _reusableGridCollection[i].EntityId;
+                        CreateNewConstruct((MyCubeGrid)_reusableGridCollection[i]);
+                        continue;
+                    }
+                    _constructs[primaryConstruct].Add((MyCubeGrid)_reusableGridCollection[i]);
+                    _constructMap.TryAdd(_reusableGridCollection[i].EntityId, primaryConstruct);
+                }
+                WriteGeneral($"{nameof(HandleConstruct)} [{parentEntity}]", _constructs[parentEntity].ToString());
+                return;
+            }
+
+            foreach (IMyCubeGrid subGrid in _reusableGridCollection)
+            {
+                _constructs[parentEntity].Add((MyCubeGrid)subGrid);
+                _constructMap.TryAdd(subGrid.EntityId, parentEntity);
+            }
+            WriteGeneral($"{nameof(HandleConstruct)} [{parentEntity}]", _constructs[parentEntity].ToString());
+        }
+
+        private void CreateNewConstruct(MyCubeGrid grid)
+        {
+            var construct = new Construct(grid);
+            construct.OnCloseConstruct += CloseConstruct;
+            construct.OnWriteToLog += WriteGeneral;
+            _constructs.TryAdd(grid.EntityId, construct);
+            _constructMap.TryAdd(grid.EntityId, grid.EntityId);
+        }
+
+        private long ValidateConstructExists()
+        {
+            foreach (IMyCubeGrid grid in _reusableGridCollection)
+            {
+                if (!_constructMap.ContainsKey(grid.EntityId)) continue;
+                return grid.EntityId;
+            }
+            return 0;
+        }
 
         private List<MyEntity> GrabNearbyGrids(Vector3D center)
         {
             _entList.Clear();
-            BoundingSphereD pruneSphere = new BoundingSphereD(center, 200);
+            var pruneSphere = new BoundingSphereD(center, 200);
             MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref pruneSphere, _entList);
             for (int i = _entList.Count - 1; i >= 0; i--)
             {
                 if (!(_entList[i] is MyCubeGrid))
                     _entList.RemoveAtFast(i);
-                //WriteGeneral(nameof(GrabNearbyGrids), $"[{_entList[i].EntityId}] [[{_entList[i].GetType()}]");
             }
             return _entList;
         }
@@ -174,41 +222,14 @@ namespace HostileTakeover
 		private void RunGrinderLogic(IMyAngleGrinder grinder)
         {
             List<MyEntity> entList = GrabNearbyGrids(grinder.GetPosition());
-	        foreach (MyEntity target in entList)
+            WriteGeneral(nameof(RunGrinderLogic), $"Grinder: [{grinder.OwnerIdentityId}] [{grinder.OwnerId}] [{entList.Count}]");
+            foreach (MyEntity target in entList)
             {
-                AddGpsLocation($"[{target.EntityId}] {((MyCubeGrid)target).DisplayName}", target.PositionComp.GetPosition());
+                if (_constructMap.ContainsKey(target.EntityId) && grinder.OwnerIdentityId != 0)
+                    _constructs[_constructMap[target.EntityId]].EnableBlockHighlights(grinder.OwnerIdentityId);
 				WriteGeneral(nameof(RunGrinderLogic), $"[{target.EntityId}] [{((MyCubeGrid)target).DisplayName}]");
             }
-            WriteGeneral(nameof(RunGrinderLogic), $"Grinder: [{grinder.OwnerIdentityId}] [{grinder.OwnerId}] [{entList.Count()}]");
         }
-
-		private void AddToOwnerships(MyCubeGrid grid)
-		{
-			PopulateGridList(grid);
-            WriteGeneral(nameof(AddToOwnerships), $"Attaching logic to: [{_reusableGridCollection.Count:00}] [{grid.EntityId}] {grid.DisplayName}");
-			// This grid is part of a grid collection, so it needs to be tracked with it's relatives if they are already being tracked
-			if (_reusableGridCollection.Count > 1)
-			{
-                WriteGeneral(nameof(AddToOwnerships), $"Grid found as part of a construct, adding to collection: [{grid.EntityId}] {grid.DisplayName}");
-				// Confirmed this grid is part of a tracked group, so add it to the rest of it's family
-				foreach (IMyCubeGrid grids in _reusableGridCollection)
-				{
-					if (!_constructs.ContainsKey(grids.EntityId)) continue;
-					_constructMap.TryAdd(grid.EntityId, grids.EntityId);
-					_constructs[grids.EntityId].Add(grid);
-                    WriteGeneral(nameof(AddToOwnerships), _constructs[grids.EntityId].ToString());
-					return;
-				}
-			}
-
-            WriteGeneral(nameof(AddToOwnerships), $"New grid identified, creating new collection: [{grid.EntityId}] {grid.DisplayName}");
-			var construct = new Construct(grid);
-			construct.OnCloseConstruct += CloseConstruct;
-            construct.OnWriteToLog += WriteGeneral;
-			_constructs.TryAdd(grid.EntityId, construct);
-			_constructMap.TryAdd(grid.EntityId, grid.EntityId);
-            WriteGeneral(nameof(AddToOwnerships), construct.ToString());
-		}
 
         private void CloseConstruct(Construct construct)
         {

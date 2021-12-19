@@ -10,6 +10,7 @@ using Sandbox.ModAPI;
 using VRage.Game;
 using VRage.Game.Entity;
 using VRage.Game.ModAPI;
+using VRage.Serialization;
 using VRageMath;
 
 namespace HostileTakeover.Models
@@ -121,7 +122,6 @@ namespace HostileTakeover.Models
             grid.OnFatBlockAdded += OnFatBlockAdded;
             grid.OnFatBlockRemoved += OnFatBlockRemoved;
             grid.OnFatBlockClosed += OnFatBlockRemoved;
-            grid.OnBlockOwnershipChanged += OnBlockOwnershipChanged;
             grid.OnGridSplit += OnGridSplit;
             grid.OnClose += GridOnClose;
         }
@@ -135,7 +135,6 @@ namespace HostileTakeover.Models
 			grid.OnFatBlockAdded -= OnFatBlockAdded;
             grid.OnFatBlockRemoved -= OnFatBlockRemoved;
             grid.OnFatBlockClosed -= OnFatBlockRemoved;
-            grid.OnBlockOwnershipChanged -= OnBlockOwnershipChanged;
             grid.OnGridSplit -= OnGridSplit;
             grid.OnClose -= GridOnClose;
         }
@@ -148,8 +147,9 @@ namespace HostileTakeover.Models
         /// <param name="block"></param>
 		private void OnFatBlockAdded(MyCubeBlock block)
 		{
+            if (!(block is IMyTerminalBlock)) return;
             WriteToLog(nameof(OnFatBlockAdded), $"Block add detected: [{(block.IsWorking ? "T" : "F")}] {block.BlockDefinition.Id.SubtypeName}");
-			ClaimBlockOwnership(block);
+            ClaimBlockOwnership(block);
 			IdentifyImportantBlock(block);
 		}
 
@@ -162,22 +162,11 @@ namespace HostileTakeover.Models
         /// <param name="block"></param>
         private void OnFatBlockRemoved(MyCubeBlock block)
         {
+            if (!(block is IMyTerminalBlock)) return;
             WriteToLog(nameof(OnFatBlockRemoved), $"Block removal detected: {block.BlockDefinition.Id.SubtypeName}");
 			CloseBlock(block);
         }
-
-        /// <summary>
-        /// Fires whenever a block on a grid changes ownership.  Currently unused but hooked for evaluation
-        /// TODO: Evaluate whether this event registration makes sense and remove if not
-        /// </summary>
-        /// <param name="block"></param>
-        private void OnBlockOwnershipChanged(MyCubeGrid block)
-        {
-            // I need to experiment with this; not sure it's performant or useful since it doesn't actually identify the block.
-            // Block events should account for this issue.
-            WriteToLog(nameof(OnBlockOwnershipChanged), $"Ownership change triggered on grid level...");
-        }
-
+        
         /// <summary>
         /// Fires when a grid splits for some reason
         /// Currently only used to prune blocks that are removed from the main grid
@@ -190,7 +179,10 @@ namespace HostileTakeover.Models
 		{
             WriteToLog(nameof(OnGridSplit), $"Grid split detected: {oldGrid.EntityId} | {newGrid.EntityId}");
 			foreach (var block in newGrid.GetFatBlocks())
-				CloseBlock(block);
+            {
+                if (!(block is IMyTerminalBlock)) continue;
+                CloseBlock(block);
+            }
 		}
 
         /// <summary>
@@ -211,6 +203,7 @@ namespace HostileTakeover.Models
         /// <param name="block"></param>
         private void CloseBlock(MyCubeBlock block)
         {
+            if (!(block is IMyTerminalBlock)) return;
             RemoveFromImportantBlocks(block);
             RemoveFromHighlightedBlocks(block);
             BlockDeRegisterEvents(block);
@@ -218,20 +211,7 @@ namespace HostileTakeover.Models
         }
 
         /// <summary>
-        /// OnClose block event
-        /// Calls Close block
-        /// TODO: Probably not needed since this is already covered on grid block removal and closure.  Evaluate and remove if deemed unnecessary.
-        /// </summary>
-        /// <param name="block"></param>
-        private void BlockOnClose(MyEntity block)
-        {
-            CloseBlock((MyCubeBlock)block);
-        }
-
-        /// <summary>
         /// Sends all fat blocks on a grid for important block identification
-        /// Can probably improve by pruning out all non-terminal blocks before sending for identification
-        /// TODO: Determine if this method can be improved or not
         /// </summary>
         /// <param name="grid"></param>
     	private void FindImportantBlocks(MyCubeGrid grid)
@@ -239,21 +219,41 @@ namespace HostileTakeover.Models
 			foreach (MyCubeBlock block in grid.GetFatBlocks())
 				IdentifyImportantBlock(block);
 		}
-		
+
+        // TODO: Separate important blocks into 2 groups
+        // TODO:    1 group for control blocks
+        // TODO:    1 group for weapon blocks
+        // TODO: Highlight control blocks first
+        // TODO: If no control blocks exist, then highlight weapon blocks
+        // TODO: Make the two highlights two different colors
+        // TODO:    Blue for control blocks
+        // TODO:    Red for weapon blocks
+
+        // TODO: Try to make the logic for blocks automatic and not based on a manual list
+        // TODO: This idea will require a lot of testing 
+        // TODO: Pay special attention to Weapon Core weapons
+        // TODO:    Will probably need to import the Weapon Core API for proper weapon checking
+
         /// <summary>
         /// Identifies important blocks
         /// Also sends all important blocks out for event registration
         /// </summary>
         /// <param name="block"></param>
-		private void IdentifyImportantBlock(MyCubeBlock block)
-		{
+        private void IdentifyImportantBlock(MyCubeBlock block)
+        {
+            if (!(block is IMyTerminalBlock)) return;
 			if (!ImportantBlocks.IsBlockImportant(block)) return;
             if (_activeImportantBlocks.ContainsKey(block.EntityId)) return;
             if (_inactiveImportantBlocks.ContainsKey(block.EntityId)) return;
-			AddToImportantBlocks(block);
+            var controller = block as IMyShipController;
+            if (controller != null)
+            {
+                WriteToLog(nameof(IdentifyImportantBlock), $"Found a ship controller: [{(controller.CanControlShip ? "T" : "F")}] {block.BlockDefinition.Id.SubtypeName}");
+            }
+            AddToImportantBlocks(block);
 			BlockRegisterEvents(block);
-			WriteToLog(nameof(IdentifyImportantBlock), $"Adding to important blocks: {block.BlockDefinition.Id.SubtypeName}");
-		}
+			WriteToLog(nameof(IdentifyImportantBlock), $"Adding to important blocks: [{block.GetType()}] [{block.BlockDefinition.Id.TypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
+        }
 
         /// <summary>
         /// Registers all block level events we care about
@@ -262,7 +262,6 @@ namespace HostileTakeover.Models
         private void BlockRegisterEvents(MyCubeBlock block)
         {
             block.IsWorkingChanged += BlockOnWorkingChanged;
-            block.OnClose += BlockOnClose;
             ((IMyTerminalBlock)block).OwnershipChanged += BlockOnOwnershipChanged;
         }
 
@@ -274,7 +273,6 @@ namespace HostileTakeover.Models
         {
             block.IsWorkingChanged -= BlockOnWorkingChanged;
             ((IMyTerminalBlock)block).OwnershipChanged -= BlockOnOwnershipChanged;
-            block.OnClose -= BlockOnClose;
         }
 
         /// <summary>
@@ -355,9 +353,15 @@ namespace HostileTakeover.Models
         {
             WriteToLog(nameof(ClaimBlockOwnership),
                 $"Ownership change requested: [{_gridOwner}] [{block.OwnerId}] ([{(block.OwnerId == _gridOwner ? "T" : "F")}][{(block.IsWorking ? "T" : "F")}]) {block.BlockDefinition.Id.SubtypeName}");
+            if (!block.IsWorking)
+            {
+                DisownBlock(block);
+                return;
+            }
             if (block.OwnerId == _gridOwner) return;
-            var tb = block as IMyTerminalBlock;
-            if (tb != null)
+            //var tb = block as IMyTerminalBlock;
+            //if (tb != null)
+            if (block is IMyTerminalBlock)
                 _delayedActions.Enqueue(() =>
                 {
                     block.ChangeOwner(_gridOwner, MyOwnershipShareModeEnum.Faction);
@@ -371,10 +375,8 @@ namespace HostileTakeover.Models
         /// <param name="block"></param>
         private void DisownBlock(MyCubeBlock block)
         {   // SE likes to keep ownership of disabled blocks for... reasons.  Can cause issues with this mod idea.  Need to make sure the disabled blocks are properly disowned.
-            WriteToLog(nameof(DisownBlock),
-                $"Disown Block Requested: {block.BlockDefinition.Id.SubtypeName}");
-            var tb = block as IMyTerminalBlock;
-            if (tb != null)
+            WriteToLog(nameof(DisownBlock), $"Disown Block Requested: {block.BlockDefinition.Id.SubtypeName}");
+            if (block is IMyTerminalBlock)
                 _delayedActions.Enqueue(() =>
                 {
                     block.ChangeOwner(0, MyOwnershipShareModeEnum.All);
@@ -382,7 +384,7 @@ namespace HostileTakeover.Models
                 });
         }
 
-		/// <summary>
+        /// <summary>
 		/// TODO
 		/// 1) Make a collection for all blocks currently highlighted
 		/// 2) Put that collection on a tick prune after say, 10 seconds
@@ -476,7 +478,7 @@ namespace HostileTakeover.Models
         /// <summary>
         /// Processes generic actions delayed by 10 ticks from original call
         /// </summary>
-		public void ProcessTickDelayedActions()
+        public void ProcessTickDelayedActions()
         {
             while (_delayedActions.Count > 0)
             {
@@ -490,10 +492,9 @@ namespace HostileTakeover.Models
         public void ProcessPerTickActions()
         {
             _gridTick++;
-            if (_highlightedBlocks.ContainsKey(_gridTick))
-            {
-				DisableBlockHighlights(_highlightedBlocks[_gridTick]);
-            }
+            HashSet<HighlightedBlocks> blocks;
+            if (_highlightedBlocks.TryRemove(_gridTick, out blocks))
+                DisableBlockHighlights(blocks);
         }
 
         /// <summary>
