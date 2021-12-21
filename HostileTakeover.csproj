@@ -151,6 +151,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include=".editorconfig" />
     <None Include="Mod\HostileTakeover\Data\AnimationControllers\AC_Astronaut.sbc" />
     <None Include="Mod\HostileTakeover\Data\AnimationControllers\AC_Astronaut_Female.sbc" />
     <None Include="Mod\HostileTakeover\Data\FinderToolDefinition.sbc" />

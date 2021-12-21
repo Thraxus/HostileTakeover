@@ -3,14 +3,17 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using HostileTakeover.Common.BaseClasses;
-using HostileTakeover.References;
+using Sandbox.Common.ObjectBuilders;
 using Sandbox.Game;
 using Sandbox.Game.Entities;
+using Sandbox.Game.Entities.Cube;
+using Sandbox.Game.GameSystems;
 using Sandbox.ModAPI;
+using SpaceEngineers.Game.ModAPI;
 using VRage.Game;
 using VRage.Game.Entity;
 using VRage.Game.ModAPI;
-using VRage.Serialization;
+using VRage.Utils;
 using VRageMath;
 
 namespace HostileTakeover.Models
@@ -42,26 +45,43 @@ namespace HostileTakeover.Models
         /// Stores all the grids in this construct ("subgrids")
         ///     (long, MyCubeGrid) => (gridId, grid)
         /// </summary>
-        private readonly ConcurrentDictionary<long, MyCubeGrid> _grids = new ConcurrentDictionary<long, MyCubeGrid>();
+        private readonly HashSet<MyCubeGrid> _grids = new HashSet<MyCubeGrid>();
+
+        ///// <summary>
+        ///// Stores all the blocks actively being tracked as important
+        /////     Once this list is empty, the entire construct is disowned
+        /////     (long, MyCubeBlock) => (blockId, block)
+        ///// </summary>
+        //private readonly ConcurrentDictionary<long, MyCubeBlock> _activeControlBlocks = new ConcurrentDictionary<long, MyCubeBlock>();
+
+        ///// <summary>
+        ///// Stores all the blocks actively being tracked as important
+        /////     Once this list is empty, the entire construct is disowned
+        /////     (long, MyCubeBlock) => (blockId, block)
+        ///// </summary>
+        //private readonly ConcurrentDictionary<long, MyCubeBlock> _activeWeaponBlocks = new ConcurrentDictionary<long, MyCubeBlock>();
 
         /// <summary>
-        /// Stores all the blocks actively being tracked as important
-        ///     Once this list is empty, the entire construct is disowned
-        ///     (long, MyCubeBlock) => (blockId, block)
+        /// Stores all the blocks that are tracked
         /// </summary>
-        private readonly ConcurrentDictionary<long, MyCubeBlock> _activeImportantBlocks = new ConcurrentDictionary<long, MyCubeBlock>();
+        private readonly HashSet<MyCubeBlock> _activeBlocks2 = new HashSet<MyCubeBlock>();
+
+        ///// <summary>
+        ///// Stores all the blocks that were once tracked, or that should have been tracked had they been operational when scanned
+        /////	    This is required to account for partially built blocks or blocks that may be repaired at some point
+        /////     (long, MyCubeBlock) => (blockId, block)
+        ///// </summary>
+        //private readonly HashSet<MyCubeBlock> _inactiveBlocks = new HashSet<MyCubeBlock>();
 
         /// <summary>
-        /// Stores all the blocks that were once tracked, or that should have been tracked had they been operational when scanned
-        ///	    This is required to account for partially built blocks or blocks that may be repaired at some point
-        ///     (long, MyCubeBlock) => (blockId, block)
+        /// Contains a queue of generic actions that fire on a 10 tick schedule from the mod core
         /// </summary>
-        private readonly ConcurrentDictionary<long, MyCubeBlock> _inactiveImportantBlocks = new ConcurrentDictionary<long, MyCubeBlock>();
+        private readonly Queue<Action> _10TickDelayedActions = new Queue<Action>();
 
         /// <summary>
-        /// Contains a queue of generic actions that fire on a schedule tick call from the mod core
+        /// Contains a queue of generic actions that fire on a 1 tick schedule from the mod core
         /// </summary>
-        private readonly Queue<Action> _delayedActions = new Queue<Action>();
+        private readonly Queue<Action> _perTickDelayedActions = new Queue<Action>();
 
         /// <summary>
         /// Collection of all blocks currently highlighted
@@ -75,18 +95,18 @@ namespace HostileTakeover.Models
         /// </summary>
         private const long HighlightDuration = Common.Settings.TicksPerSecond * 10;
 
+        private const int HighlightPulseDuration = 10;
+
+        private const int DetectionRange = 50;
+
         /// <summary>
         /// Private class that controls basic highlighted block data
         /// </summary>
         private class HighlightedBlocks
         {
             public long TargetPlayer;
+            public Color Color;
             public HashSet<MyCubeBlock> Blocks;
-
-            public void RemoveBlock(MyCubeBlock block)
-            {
-                Blocks.Remove(block);
-            }
         }
 
         /// <summary>
@@ -107,8 +127,9 @@ namespace HostileTakeover.Models
         /// </summary>
         /// <param name="grid"></param>
 		public void Add(MyCubeGrid grid)
-		{
-			_grids.TryAdd(grid.EntityId, grid);
+        {
+            if (_grids.Contains(grid)) return;
+			_grids.Add(grid);
 			GridRegisterEvents(grid);
 			FindImportantBlocks(grid);
 		}
@@ -120,8 +141,8 @@ namespace HostileTakeover.Models
         private void GridRegisterEvents(MyCubeGrid grid)
         {   
             grid.OnFatBlockAdded += OnFatBlockAdded;
-            grid.OnFatBlockRemoved += OnFatBlockRemoved;
-            grid.OnFatBlockClosed += OnFatBlockRemoved;
+            //grid.OnFatBlockRemoved += OnFatBlockClosed;
+            grid.OnFatBlockClosed += OnFatBlockClosed;
             grid.OnGridSplit += OnGridSplit;
             grid.OnClose += GridOnClose;
         }
@@ -133,8 +154,8 @@ namespace HostileTakeover.Models
         private void GridDeRegisterEvents(MyCubeGrid grid)
         {
 			grid.OnFatBlockAdded -= OnFatBlockAdded;
-            grid.OnFatBlockRemoved -= OnFatBlockRemoved;
-            grid.OnFatBlockClosed -= OnFatBlockRemoved;
+            //grid.OnFatBlockRemoved -= OnFatBlockClosed;
+            grid.OnFatBlockClosed -= OnFatBlockClosed;
             grid.OnGridSplit -= OnGridSplit;
             grid.OnClose -= GridOnClose;
         }
@@ -148,8 +169,8 @@ namespace HostileTakeover.Models
 		private void OnFatBlockAdded(MyCubeBlock block)
 		{
             if (!(block is IMyTerminalBlock)) return;
-            WriteToLog(nameof(OnFatBlockAdded), $"Block add detected: [{(block.IsWorking ? "T" : "F")}] {block.BlockDefinition.Id.SubtypeName}");
-            ClaimBlockOwnership(block);
+            //WriteToLog(nameof(OnFatBlockAdded), $"Block add detected: [{(block.IsWorking ? "T" : "F")}] {block.BlockDefinition.Id.SubtypeName}");
+            SetAppropriateOwnership(block);
 			IdentifyImportantBlock(block);
 		}
 
@@ -160,10 +181,10 @@ namespace HostileTakeover.Models
         /// This method covers both block removed and block closed cases
         /// </summary>
         /// <param name="block"></param>
-        private void OnFatBlockRemoved(MyCubeBlock block)
+        private void OnFatBlockClosed(MyCubeBlock block)
         {
             if (!(block is IMyTerminalBlock)) return;
-            WriteToLog(nameof(OnFatBlockRemoved), $"Block removal detected: {block.BlockDefinition.Id.SubtypeName}");
+            //WriteToLog(nameof(OnFatBlockClosed), $"Block removal detected: {block.BlockDefinition.Id.SubtypeName}");
 			CloseBlock(block);
         }
         
@@ -177,7 +198,7 @@ namespace HostileTakeover.Models
         /// <param name="newGrid"></param>
 		private void OnGridSplit(MyCubeGrid oldGrid, MyCubeGrid newGrid)
 		{
-            WriteToLog(nameof(OnGridSplit), $"Grid split detected: {oldGrid.EntityId} | {newGrid.EntityId}");
+            //WriteToLog(nameof(OnGridSplit), $"Grid split detected: {oldGrid.EntityId} | {newGrid.EntityId}");
 			foreach (var block in newGrid.GetFatBlocks())
             {
                 if (!(block is IMyTerminalBlock)) continue;
@@ -220,19 +241,48 @@ namespace HostileTakeover.Models
 				IdentifyImportantBlock(block);
 		}
 
-        // TODO: Separate important blocks into 2 groups
-        // TODO:    1 group for control blocks
-        // TODO:    1 group for weapon blocks
-        // TODO: Highlight control blocks first
-        // TODO: If no control blocks exist, then highlight weapon blocks
-        // TODO: Make the two highlights two different colors
-        // TODO:    Blue for control blocks
-        // TODO:    Red for weapon blocks
-
         // TODO: Try to make the logic for blocks automatic and not based on a manual list
         // TODO: This idea will require a lot of testing 
         // TODO: Pay special attention to Weapon Core weapons
         // TODO:    Will probably need to import the Weapon Core API for proper weapon checking
+
+        /// <summary>
+        /// Important block types:
+        ///     Groups shown in order of appearance for highlights
+        /// 
+        /// Group: Control [Blue]
+        ///     Cockpits
+        ///     Remote Controls
+        ///     *AHEM* TBD BLOCK THAT CONTROLS STUFF
+        ///
+        /// Group: Medical [Red]
+        ///     Medical Centers
+        ///     Survival Kits
+        ///     Cryo Chambers
+        /// 
+        /// Group: Weapon [Yellow?]
+        ///     Turrets (all non-fixed fire weapons)
+        ///     Upgrade module with "BotSpawner" subtype (jTurp's Ai bots)
+        ///     Sorters with WeaponCore weapons (need WC API for this perhaps?  try without first)
+        ///
+        /// Group: Trap [Green?]
+        ///     Warheads
+        ///
+        /// </summary>
+
+        private readonly MyStringHash _control = MyStringHash.GetOrCompute("Control");
+        private readonly MyStringHash _medical = MyStringHash.GetOrCompute("Medical");
+        private readonly MyStringHash _weapon = MyStringHash.GetOrCompute("Weapon");
+        private readonly MyStringHash _trap = MyStringHash.GetOrCompute("Trap");
+
+        private readonly Dictionary<MyStringHash, HashSet<MyCubeBlock>> _importantBlocks =
+            new Dictionary<MyStringHash, HashSet<MyCubeBlock>>(MyStringHash.Comparer)
+            {
+                { MyStringHash.GetOrCompute("Control"), new HashSet<MyCubeBlock>() },
+                { MyStringHash.GetOrCompute("Medical"), new HashSet<MyCubeBlock>() },
+                { MyStringHash.GetOrCompute("Weapon"), new HashSet<MyCubeBlock>() },
+                { MyStringHash.GetOrCompute("Trap"), new HashSet<MyCubeBlock>() }
+            };
 
         /// <summary>
         /// Identifies important blocks
@@ -242,17 +292,91 @@ namespace HostileTakeover.Models
         private void IdentifyImportantBlock(MyCubeBlock block)
         {
             if (!(block is IMyTerminalBlock)) return;
-			if (!ImportantBlocks.IsBlockImportant(block)) return;
-            if (_activeImportantBlocks.ContainsKey(block.EntityId)) return;
-            if (_inactiveImportantBlocks.ContainsKey(block.EntityId)) return;
-            var controller = block as IMyShipController;
-            if (controller != null)
+            _10TickDelayedActions.Enqueue(() =>
             {
-                WriteToLog(nameof(IdentifyImportantBlock), $"Found a ship controller: [{(controller.CanControlShip ? "T" : "F")}] {block.BlockDefinition.Id.SubtypeName}");
+                if (!AssignBlock(block)) return;
+                BlockRegisterEvents(block);
+                //WriteToLog(nameof(IdentifyImportantBlock), $"Adding to important blocks: [{block.GetType()}] [{block.BlockDefinition.Id.TypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
+            });
+        }
+
+        private bool AssignBlock(MyCubeBlock block)
+        {
+            var controller = block as IMyShipController;
+            if (controller != null && controller.CanControlShip)
+            {
+                _importantBlocks[_control].Add(block);
+                SetAppropriateOwnership(block);
+                //WriteToLog(nameof(AssignBlock), $"Adding new Controller: [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
+                return true;
             }
-            AddToImportantBlocks(block);
-			BlockRegisterEvents(block);
-			WriteToLog(nameof(IdentifyImportantBlock), $"Adding to important blocks: [{block.GetType()}] [{block.BlockDefinition.Id.TypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
+
+            var medical = block as IMyMedicalRoom;
+            if (medical != null)
+            {
+                _importantBlocks[_medical].Add(block);
+                SetAppropriateOwnership(block);
+                //WriteToLog(nameof(AssignBlock), $"Adding new Medical: [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
+                return true;
+            }
+            
+            var cryo = block as IMyCryoChamber;
+            if (cryo!= null)
+            {
+                _importantBlocks[_medical].Add(block);
+                SetAppropriateOwnership(block);
+               //WriteToLog(nameof(AssignBlock), $"Adding new Medical: [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
+                return true;
+            }
+
+            var weapon = block as IMyLargeTurretBase;
+            if (weapon != null)
+            {
+                _importantBlocks[_weapon].Add(block);
+                SetAppropriateOwnership(block);
+                //WriteToLog(nameof(AssignBlock), $"Adding new Weapon: [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
+                return true;
+            }
+
+            var sorter = block as MyConveyorSorter;
+            if (sorter != null && !sorter.BlockDefinition.Context.IsBaseGame)
+            {
+                _importantBlocks[_weapon].Add(block);
+                SetAppropriateOwnership(block);
+                //WriteToLog(nameof(AssignBlock), $"Adding new Weapon: [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
+                return true;
+            }
+
+            var warhead = block as IMyWarhead;
+            if (warhead != null)
+            {
+                _importantBlocks[_trap].Add(block);
+                SetAppropriateOwnership(block);
+                //WriteToLog(nameof(AssignBlock), $"Adding new Trap: [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
+                return true;
+            }
+
+            if (block.BlockDefinition.Id.TypeId == typeof(MyObjectBuilder_SurvivalKit))
+            {
+                _importantBlocks[_medical].Add(block);
+                SetAppropriateOwnership(block);
+                //WriteToLog(nameof(AssignBlock), $"Adding new Skit: [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Removes an important block from both active and inactive collections
+        /// </summary>
+        /// <param name="block"></param>
+        private void RemoveFromImportantBlocks(MyCubeBlock block)
+        {
+            foreach (var kvp in _importantBlocks)
+                WriteToLog(nameof(RemoveFromImportantBlocks), $"Removing important block: [{(kvp.Value.Remove(block) ? "T" : "F")}] {block.BlockDefinition.Id.SubtypeName}");
+            //kvp.Value.Remove(block);
+            //WriteToLog(nameof(RemoveFromImportantBlocks), $"Removing important block: {block.BlockDefinition.Id.SubtypeName}");
         }
 
         /// <summary>
@@ -274,35 +398,6 @@ namespace HostileTakeover.Models
             block.IsWorkingChanged -= BlockOnWorkingChanged;
             ((IMyTerminalBlock)block).OwnershipChanged -= BlockOnOwnershipChanged;
         }
-
-        /// <summary>
-        /// Adds a block to the proper important block collection based on the IsWorking condition
-        /// TODO: Investigate problem of blocks not accurately reporting IsWorking status; may need a tick delay?
-        /// </summary>
-        /// <param name="block"></param>
-		private void AddToImportantBlocks(MyCubeBlock block)
-		{
-			if (block.IsWorking)
-			{
-				_activeImportantBlocks.TryAdd(block.EntityId, block);
-				return;
-			} 
-			_inactiveImportantBlocks.TryAdd(block.EntityId, block);
-            WriteToLog(nameof(AddToImportantBlocks), $"Adding important block: {block.BlockDefinition.Id.SubtypeName}");
-        }
-
-        /// <summary>
-        /// Removes an important block from both active and inactive collections
-        /// </summary>
-        /// <param name="block"></param>
-		private void RemoveFromImportantBlocks(MyCubeBlock block)
-		{
-			if (_activeImportantBlocks.ContainsKey(block.EntityId))
-				_activeImportantBlocks.Remove(block.EntityId);
-            if (_inactiveImportantBlocks.ContainsKey(block.EntityId))
-				_inactiveImportantBlocks.Remove(block.EntityId);
-            WriteToLog(nameof(RemoveFromImportantBlocks), $"Removing important block: {block.BlockDefinition.Id.SubtypeName}");
-		}
         
         /// <summary>
         /// Fires whenever a block changes working status
@@ -315,22 +410,9 @@ namespace HostileTakeover.Models
             // Example: Working changed can fire if the block is disabled or repaired, but being disabled also fires an ownership change (most of the time).
             //  So, why hook both events?  OnWorkingChange should cover for Ownership change as well as I can decide to act on ownership requirements based on 
             //  if the block is working or not.
-            WriteToLog(nameof(BlockOnWorkingChanged), $"Working Change Detected: [{(block.IsWorking ? "T" : "F")}] {block.BlockDefinition.Id.SubtypeName}");
-            if (!block.IsWorking)
-			{
-				if (_activeImportantBlocks.ContainsKey(block.EntityId))
-					_activeImportantBlocks.Remove(block.EntityId);
-				_inactiveImportantBlocks.TryAdd(block.EntityId, block);
-                DisownBlock(block);
-				CheckBlockBalance();
-				return;
-			}
-
-			if(_inactiveImportantBlocks.ContainsKey(block.EntityId))
-				_inactiveImportantBlocks.Remove(block.EntityId);
-			_activeImportantBlocks.TryAdd(block.EntityId, block);
-			ClaimBlockOwnership(block);
-		}
+            SetAppropriateOwnership(block);
+            //WriteToLog(nameof(BlockOnWorkingChanged), $"Working Change Detected: [{(block.IsWorking ? "T" : "F")}] [{block.EntityId}] [{block.BlockDefinition.Id.SubtypeName}]");
+        }
 
         /// <summary>
         /// Fires whenever a blocks ownership changes
@@ -339,34 +421,40 @@ namespace HostileTakeover.Models
         /// <param name="block"></param>
 		private void BlockOnOwnershipChanged(IMyTerminalBlock block)
 		{
-            // TODO OnWorkingChanged and OnOwnershipChange kinda do the same thing.  Consider combining efforts and/or only hooking one of the events
-            //  See BlockOnWorkingChanged for a better explanation
-            WriteToLog(nameof(BlockOnOwnershipChanged), $"Ownership Change Detected: [{(block.IsWorking ? "T" : "F")}] {block.BlockDefinition.SubtypeName}");
-            ClaimBlockOwnership((MyCubeBlock) block);
-		}
+            SetAppropriateOwnership((MyCubeBlock)block);
+            //WriteToLog(nameof(BlockOnOwnershipChanged), $"Ownership Change Detected: [{(block.IsWorking ? "T" : "F")}] [{block.EntityId}] [{block.BlockDefinition.SubtypeName}]");
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="block"></param>
+        private void SetAppropriateOwnership(MyCubeBlock block)
+        {
+            _10TickDelayedActions.Enqueue(() =>
+                {
+                    //WriteToLog(nameof(SetAppropriateOwnership), $"Ownership Change Requested: [{(block.IsWorking ? "T" : "F")}] [{block.EntityId}] [{block.BlockDefinition.Id.SubtypeName}]");
+                    if (block.MarkedForClose) return;
+                    var tb = block as IMyTerminalBlock;
+                    if (tb == null) return;
+                    if (block.IsWorking && block.OwnerId != _gridOwner)
+                        ClaimBlock(block);
+                    else if (!block.IsWorking && block.OwnerId != 0)
+                        DisownBlock(block);
+                    CheckBlockBalance();
+                }
+            );
+        }
 
         /// <summary>
         /// Sets the ownership of a given block to the owner of the grid (BigOwners[0])
         /// </summary>
         /// <param name="block"></param>
-        private void ClaimBlockOwnership(MyCubeBlock block)
+        private void ClaimBlock(MyCubeBlock block)
         {
-            WriteToLog(nameof(ClaimBlockOwnership),
-                $"Ownership change requested: [{_gridOwner}] [{block.OwnerId}] ([{(block.OwnerId == _gridOwner ? "T" : "F")}][{(block.IsWorking ? "T" : "F")}]) {block.BlockDefinition.Id.SubtypeName}");
-            if (!block.IsWorking)
-            {
-                DisownBlock(block);
-                return;
-            }
-            if (block.OwnerId == _gridOwner) return;
-            //var tb = block as IMyTerminalBlock;
-            //if (tb != null)
-            if (block is IMyTerminalBlock)
-                _delayedActions.Enqueue(() =>
-                {
-                    block.ChangeOwner(_gridOwner, MyOwnershipShareModeEnum.Faction);
-					IdentifyImportantBlock(block);
-                });
+            block.ChangeOwner(_gridOwner, MyOwnershipShareModeEnum.Faction);
+            //TrackBlock(block);
+            //WriteToLog(nameof(ClaimBlock), $"Claiming: [{(block.IsWorking ? "T" : "F")}] [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
         }
 
         /// <summary>
@@ -374,105 +462,138 @@ namespace HostileTakeover.Models
         /// </summary>
         /// <param name="block"></param>
         private void DisownBlock(MyCubeBlock block)
-        {   // SE likes to keep ownership of disabled blocks for... reasons.  Can cause issues with this mod idea.  Need to make sure the disabled blocks are properly disowned.
-            WriteToLog(nameof(DisownBlock), $"Disown Block Requested: {block.BlockDefinition.Id.SubtypeName}");
-            if (block is IMyTerminalBlock)
-                _delayedActions.Enqueue(() =>
-                {
-                    block.ChangeOwner(0, MyOwnershipShareModeEnum.All);
-                    IdentifyImportantBlock(block);
-                });
+        {   
+            block.ChangeOwner(0, MyOwnershipShareModeEnum.All);
+            //CheckBlockBalance();
+            //UntrackBlock(block);
+            //WriteToLog(nameof(DisownBlock), $"Disowning: [{(block.IsWorking ? "T" : "F")}] [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
         }
 
-        /// <summary>
-		/// TODO
-		/// 1) Make a collection for all blocks currently highlighted
-		/// 2) Put that collection on a tick prune after say, 10 seconds
-		///		When the prune comes up, all highlights go away
-		/// 3) Add detection for the hand grinder
-		///		This detection should come from the Core process and just alert a prefab it needs to show blocks
-		/// 4) Separate methods for enabling and disabling highlights
-		///		thickness = -1 disables the highlight, the rest of the settings are the same
-		/// </summary>
+        //private bool TrackBlock(MyCubeBlock block)
+        //{
+        //    WriteToLog(nameof(TrackBlock), $"Tracking: [{(block.IsWorking ? "T" : "F")}] [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
+        //    return block.IsWorking && _activeBlocks.Add(block);
+        //}
+
+        //private bool UntrackBlock(MyCubeBlock block)
+        //{
+        //    WriteToLog(nameof(UntrackBlock), $"No longer tracking: [{(block.IsWorking ? "T" : "F")}] [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
+        //    if (block.IsWorking) return false;
+        //    if (!_activeBlocks.Remove(block)) return false;
+        //    CheckBlockBalance();
+        //    return true;
+        //}
+
+        /// TODO Need to only care about active (i.e. working) blocks in the below collections when sending for highlighting...
+
+        private readonly HashSet<MyCubeBlock> _reusableBlocksCollection = new HashSet<MyCubeBlock>();
 
         public void EnableBlockHighlights(long playerId)
         {
-            if (playerId == 0)
+            WriteToLog(nameof(EnableBlockHighlights), this.ToString());
+            _reusableBlocksCollection.Clear();
+            if (_importantBlocks[_control].Count > 0)
             {
-                EnableAllImportantBlockHighlightsForEveryone();
-                return;
+                //WriteToLog(nameof(EnableBlockHighlights), $"Highlighting [{_importantBlocks[_control].Count:00}] blocks.");
+                foreach (var block in _importantBlocks[_control])
+                {
+                    //WriteToLog(nameof(EnableBlockHighlights), $"{" ",-6}[{(block.IsWorking ? "T" : "F")}][{block.EntityId,-18:000000000000000000}] TypeId: {block.BlockDefinition.Id.TypeId,-20}  SubtypeId: {block.BlockDefinition.Id.SubtypeName}");
+                    if (block.IsWorking)
+                        _reusableBlocksCollection.Add(block);
+                }
             }
-            EnableHighlightForAllImportantBlocks(playerId);
+            if (CheckHighlightCollection(_reusableBlocksCollection, playerId, Color.Orange)) return;
+
+            if (_importantBlocks[_medical].Count > 0)
+            {
+                //WriteToLog(nameof(EnableBlockHighlights), $"Highlighting [{_importantBlocks[_medical].Count:00}] blocks.");
+                foreach (var block in _importantBlocks[_medical])
+                {
+                    if (block.IsWorking)
+                        _reusableBlocksCollection.Add(block);
+                }
+            }
+            if (CheckHighlightCollection(_reusableBlocksCollection, playerId, Color.Red)) return;
+
+            if (_importantBlocks[_weapon].Count > 0)
+            {
+                //WriteToLog(nameof(EnableBlockHighlights), $"Highlighting [{_importantBlocks[_weapon].Count:00}] blocks.");
+                foreach (var block in _importantBlocks[_weapon])
+                {
+                    if (block.IsWorking)
+                        _reusableBlocksCollection.Add(block);
+                }
+            }
+            if (CheckHighlightCollection(_reusableBlocksCollection, playerId, Color.Yellow)) return;
+
+            if (_importantBlocks[_trap].Count > 0)
+            {
+                //WriteToLog(nameof(EnableBlockHighlights), $"Highlighting [{_importantBlocks[_trap].Count:00}] blocks.");
+                foreach (var block in _importantBlocks[_trap])
+                {
+                    if (block.IsWorking)
+                        _reusableBlocksCollection.Add(block);
+                }
+            }
+            if (CheckHighlightCollection(_reusableBlocksCollection, playerId, Color.Green)) return;
         }
 
-        private void EnableHighlightForAllImportantBlocks(long playerId)
+        private bool CheckHighlightCollection(HashSet<MyCubeBlock> blocks, long playerId, Color color)
         {
-            var highlightedBlocks = new HighlightedBlocks()
+            //WriteToLog(nameof(CheckHighlightCollection), $"Validating [{blocks.Count:00}] blocks.");
+            if (blocks.Count <= 0) return false;
+            //WriteToLog(nameof(CheckHighlightCollection), $"Highlighting [{blocks.Count:00}] blocks.");
+            EnableBlockListHighlights(blocks, playerId, color);
+            return true;
+        }
+
+        // MyTuple<long, MyCubeBlock, long, Color> hlb = new MyTuple<long, MyCubeBlock, long, Color>();
+
+        private void EnableBlockListHighlights(HashSet<MyCubeBlock> blocks, long playerId, Color color)
+        {
+            var hlb = new HighlightedBlocks()
             {
                 TargetPlayer = playerId,
+                Color = color,
                 Blocks = new HashSet<MyCubeBlock>()
             };
-			foreach (KeyValuePair<long, MyCubeBlock> block in _activeImportantBlocks)
+
+            foreach (MyCubeBlock block in blocks)
             {
-                highlightedBlocks.Blocks.Add(block.Value);
-                EnableBlockHighlight(block.Value, playerId);
+                EnableHighlight(block, playerId, color);
+                hlb.Blocks.Add(block);
+
             }
-			if (!_highlightedBlocks.ContainsKey(_gridTick + HighlightDuration))
-                _highlightedBlocks.TryAdd(_gridTick + HighlightDuration, new HashSet<HighlightedBlocks>());
-			_highlightedBlocks[_gridTick + HighlightDuration].Add(highlightedBlocks);
+
+            long removalTick = _gridTick + HighlightDuration;
+
+            if (!_highlightedBlocks.ContainsKey(removalTick))
+                _highlightedBlocks.TryAdd(removalTick, new HashSet<HighlightedBlocks>());
+            _highlightedBlocks[removalTick].Add(hlb);
         }
 
-		private static void EnableBlockHighlight(MyCubeBlock block, long playerId)
+        private static void EnableHighlight(MyCubeBlock block, long playerId, Color color)
         {
-            MyVisualScriptLogicProvider.SetHighlight(block.Name, true, 2, 300, Color.MediumVioletRed, playerId);
+            MyVisualScriptLogicProvider.SetHighlight(block.Name, true, 2, HighlightPulseDuration, color, playerId);
         }
 
-        private void EnableAllImportantBlockHighlightsForEveryone()
+        private static void DisableHighlight(MyCubeBlock block, long playerId, Color color)
         {
-            foreach (var block in _activeImportantBlocks)
-            {
-				MyVisualScriptLogicProvider.SetHighlightForAll(block.Value.Name, true, 2, 300, Color.MediumVioletRed);
-			}
+            MyVisualScriptLogicProvider.SetHighlight(block.Name, false, -1, HighlightPulseDuration, color, playerId);
         }
 
-        private void DisableAllImportantBlockHighlightsForEveryone()
+        private void DisableHighlights(HashSet<HighlightedBlocks> hBlocks)
         {
-            foreach (var block in _activeImportantBlocks)
-            {
-                MyVisualScriptLogicProvider.SetHighlightForAll(block.Value.Name, false, -1, 300, Color.MediumVioletRed);
-            }
+            foreach (var x in hBlocks)
+                foreach (var y in x.Blocks)
+                    DisableHighlight(y, x.TargetPlayer, x.Color);
         }
-
-        private void DisableBlockHighlights(HashSet<HighlightedBlocks> hBlocks)
-        {
-            foreach (var blocks in hBlocks)
-            {
-				if (blocks.TargetPlayer == 0)
-                {
-                    DisableAllImportantBlockHighlightsForEveryone();
-                    continue;
-                }
-                DisableHighlightForAllImportantBlocks(blocks);
-			}
-        }
-
-        private static void DisableHighlightForAllImportantBlocks(HighlightedBlocks blocks)
-        {
-            foreach (var block in blocks.Blocks)
-            {
-				MyVisualScriptLogicProvider.SetHighlight(block.Name, false, -1, 300, Color.MediumVioletRed, blocks.TargetPlayer);
-			}
-        }
-
+        
         private void RemoveFromHighlightedBlocks(MyCubeBlock block)
         {
-            foreach (KeyValuePair<long, HashSet<HighlightedBlocks>> hBlocks in _highlightedBlocks)
-            {
-                foreach (HighlightedBlocks blocks in hBlocks.Value)
-                {
-                    blocks.RemoveBlock(block);
-                }
-            }
+            foreach (KeyValuePair<long, HashSet<HighlightedBlocks>> kvp in _highlightedBlocks)
+                foreach (HighlightedBlocks blocks in kvp.Value)
+                    blocks.Blocks.Remove(block);
         }
 
         /// <summary>
@@ -480,9 +601,9 @@ namespace HostileTakeover.Models
         /// </summary>
         public void ProcessTickDelayedActions()
         {
-            while (_delayedActions.Count > 0)
+            while (_10TickDelayedActions.Count > 0)
             {
-                _delayedActions.Dequeue()?.Invoke();
+                _10TickDelayedActions.Dequeue()?.Invoke();
             }
         }
 
@@ -494,16 +615,46 @@ namespace HostileTakeover.Models
             _gridTick++;
             HashSet<HighlightedBlocks> blocks;
             if (_highlightedBlocks.TryRemove(_gridTick, out blocks))
-                DisableBlockHighlights(blocks);
+                DisableHighlights(blocks);
+        }
+
+        private bool CheckAnyActiveBlocksExist()
+        {
+            foreach (var kvp in _importantBlocks)
+            {
+                foreach (var block in kvp.Value)
+                {
+                    if (!block.IsWorking) continue;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private HashSet<MyCubeBlock> GetActiveBlockList()
+        {
+            HashSet<MyCubeBlock> activeBlocks = new HashSet<MyCubeBlock>();
+            foreach (var kvp in _importantBlocks)
+            {
+                foreach (var block in kvp.Value)
+                {
+                    if (!block.IsWorking) continue;
+                    activeBlocks.Add(block);
+                }
+            }
+            return activeBlocks;
         }
 
         /// <summary>
         /// Checks the balance of important blocks and disowns the grid if none remain
         /// </summary>
 		private void CheckBlockBalance()
-		{
-			if (_activeImportantBlocks.Count == 0)
-				DisownGrid();
+        {
+            //WriteToLog(nameof(CheckBlockBalance), $"{GetActiveBlockList().Count}");
+            if (CheckAnyActiveBlocksExist()) return;
+            DisownGrid();
+			//if (_activeBlocks.Count == 0)
+				//DisownGrid();
 		}
 
         /// <summary>
@@ -512,8 +663,9 @@ namespace HostileTakeover.Models
         /// </summary>
         private void DisownGrid()
 		{
-			foreach (var grid in _grids)
-				GridSetOwnership(grid.Value);
+            //WriteToLog(nameof(DisownGrid), $"Disowning Grid.");
+            foreach (var grid in _grids)
+				GridSetOwnership(grid);
 			Close();
 		}
 		
@@ -522,34 +674,19 @@ namespace HostileTakeover.Models
             // There is no reason to close out the important blocks from this grid.
             // When the grid closes, the blocks will close, which will prune them from the other dictionaries
             GridDeRegisterEvents((MyCubeGrid)grid);
-            CloseGrid((MyCubeGrid)grid);
+            _grids.Remove((MyCubeGrid)grid);
             if (_grids.Count == 0) Close();
-        }
-		
-		private void CloseGrid(MyCubeGrid grid)
-        {
-			_grids.Remove(grid.EntityId);
-            //if (!_gridBlockMap.ContainsKey(grid.EntityId)) return;
-            //_gridBlockMap[grid.EntityId].Clear();
-            //_gridBlockMap.Remove(grid.EntityId);
         }
 
         /// <summary>
         /// Closes the construct
-        /// TODO: Clean this up
         /// </summary>
         public override void Close()
         {
-            foreach (var block in _activeImportantBlocks)
-                BlockDeRegisterEvents(block.Value);
-            foreach (var block in _inactiveImportantBlocks)
-                BlockDeRegisterEvents(block.Value);
-            foreach (var grid in _grids)
-                GridDeRegisterEvents(grid.Value);
-            _activeImportantBlocks.Clear();
-            _inactiveImportantBlocks.Clear();
+            foreach (var kvp in _importantBlocks)
+                kvp.Value.Clear();
+            //_activeBlocks.Clear();                   
             _grids.Clear();
-            //_gridBlockMap.Clear();
             OnCloseConstruct?.Invoke(this);
             base.Close();
         }
@@ -564,7 +701,7 @@ namespace HostileTakeover.Models
 		{
 			double distance = double.MaxValue;
 			MyCubeBlock closestBlock = null;
-			foreach (var block in _activeImportantBlocks.Values)
+			foreach (var block in GetActiveBlockList())
 			{
 				double abs = Math.Abs(((IMyCubeBlock) block).GetPosition().LengthSquared() - source.LengthSquared());
 				if ((abs > distance)) continue;
@@ -574,51 +711,82 @@ namespace HostileTakeover.Models
 			return closestBlock;
 		}
 
-        //private readonly List<IMyPlayer> _reusablePlayerCollection = new List<IMyPlayer>();
-		
-        //MyAPIGateway.Players.GetPlayers(_reusablePlayerCollection, x => x.SteamUserId > 0 && x.Character != null);
-		
         public override void WriteToLog(string caller, string message)
         {
             base.WriteToLog($"[{GridId}] {caller}", message);
         }
 
         private readonly StringBuilder _report = new StringBuilder();
-		private const string Indent = "    ";
-
+		
 		public override string ToString()
 		{
 			_report.Clear();
-
-			_report.AppendLine($"Report for Grid Construct: {GridId}");
-			_report.AppendLine($"{Indent} Owner: {_gridOwner}");
+            _report.AppendLine();
+            _report.AppendLine();
+            _report.AppendFormat("{0,-2}Report for Grid Construct: [{1:000000000000000000}]", "", GridId);
 			_report.AppendLine();
+            _report.AppendFormat("{0,-4}Owner: {1}"," ", _gridOwner);
+			_report.AppendLine();
+            _report.AppendLine();
 
-			_report.AppendLine("** Grids **");
-			_report.AppendLine($"{Indent} Total: {_grids.Count}");
-			foreach (var grid in _grids)
+            _report.AppendFormat("{0,-4}***** Grids [{1}] *****", " ", _grids.Count);
+            _report.AppendLine();
+            foreach (var grid in _grids)
+            {
+                _report.AppendFormat("{0,-6}ID: {1,-20}  Name: {2}", " ", grid.EntityId, grid.DisplayName);
+                _report.AppendLine();
+            }
+
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4}***** Active Important Blocks *****", " ");
+            _report.AppendLine();
+            foreach (var block in GetActiveBlockList())
 			{
-				_report.AppendLine($"{Indent} ID: {grid.Key, -20}  Name: {grid.Value.DisplayName}");
+                _report.AppendFormat("{0,-6}[{1,-18:000000000000000000}] TypeId: {2,-20}  SubtypeId: {3}", " ", block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
+                _report.AppendLine();
 			}
+            
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4}***** Important Block Dictionary *****", " ");
+            _report.AppendLine();
+            _report.AppendLine();
+            _report.AppendFormat("{0,-6}**** [{1:00}] Control Blocks ****", " ", _importantBlocks[_control].Count);
+            _report.AppendLine();
+            foreach (var block in _importantBlocks[_control])
+            {
+                _report.AppendFormat("{0,-6}[{1}][{2,-18:000000000000000000}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsWorking ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
+                _report.AppendLine();
+            }
+            
+            _report.AppendLine();
+            _report.AppendFormat("{0,-6}**** [{1:00}] Medical Blocks ****", " ", _importantBlocks[_medical].Count);
+            _report.AppendLine();
+            foreach (var block in _importantBlocks[_medical])
+            {
+                _report.AppendFormat("{0,-6}[{1}][{2,-18:000000000000000000}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsWorking ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
+                _report.AppendLine();
+            }
+            
+            _report.AppendLine();
+            _report.AppendFormat("{0,-6}**** [{1:00}] Weapon Blocks ****", " ", _importantBlocks[_weapon].Count);
+            _report.AppendLine();
+            foreach (var block in _importantBlocks[_weapon])
+            {
+                _report.AppendFormat("{0,-6}[{1}][{2,-18:000000000000000000}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsWorking ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
+                _report.AppendLine();
+            }
+            
+            _report.AppendLine();
+            _report.AppendFormat("{0,-6}**** [{1:00}] Trap Blocks ****", " ", _importantBlocks[_trap].Count);
+            _report.AppendLine();
+            foreach (var block in _importantBlocks[_trap])
+            {
+                _report.AppendFormat("{0,-6}[{1}][{2,-18:000000000000000000}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsWorking ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
+                _report.AppendLine();
+            }
 
-			_report.AppendLine();
-			_report.AppendLine("** Active Important Blocks **");
-			_report.AppendLine($"{Indent} Total: {_activeImportantBlocks.Count}");
-			foreach (var block in _activeImportantBlocks)
-			{
-				_report.AppendLine($"{Indent} TypeId: {block.Value.BlockDefinition.Id.TypeId, -30} SubtypeId: {block.Value.BlockDefinition.Id.SubtypeId}");
-			}
-
-			_report.AppendLine();
-			_report.AppendLine("** Inactive Important Blocks **");
-			_report.AppendLine($"{Indent} Total: {_inactiveImportantBlocks.Count}");
-			foreach (var block in _inactiveImportantBlocks)
-			{
-				_report.AppendLine($"{Indent} TypeId: {block.Value.BlockDefinition.Id.TypeId,-30} SubtypeId: {block.Value.BlockDefinition.Id.SubtypeId}");
-			}
-			_report.AppendLine();
-
-			return _report.ToString();
+            _report.AppendLine();
+            return _report.ToString();
 		}
 	}
 }

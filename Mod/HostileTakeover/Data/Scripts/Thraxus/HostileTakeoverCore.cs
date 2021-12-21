@@ -42,6 +42,8 @@ namespace HostileTakeover
 
         private readonly List<MyEntity> _entList = new List<MyEntity>();
 
+        private const double DetectionRange = 150;
+
         private void PopulateGridList(IMyCubeGrid thisGrid)
 		{
 			_reusableGridCollection.Clear();
@@ -57,7 +59,7 @@ namespace HostileTakeover
         protected override void BeforeSimUpdate()
         {
             base.BeforeSimUpdate();
-            if (_constructs.IsEmpty) return;
+            //if (_constructs.Count <= 0) return;
             foreach (KeyValuePair<long, Construct> construct in _constructs)
             {
                 construct.Value.ProcessPerTickActions();
@@ -149,18 +151,21 @@ namespace HostileTakeover
         private void HandleConstruct(MyCubeGrid grid)
         {
             PopulateGridList(grid);
-            WriteGeneral(nameof(HandleConstruct), $"Attaching logic to: [{_reusableGridCollection.Count:00}] [{grid.EntityId}] {grid.DisplayName}");
+            WriteGeneral(nameof(HandleConstruct), $"Processing Construct: [{_reusableGridCollection.Count:00}] [{grid.EntityId}] {grid.DisplayName}");
 
             if (_reusableGridCollection.Count == 1)
             {
-                CreateNewConstruct(grid);
+                _constructs.TryAdd(grid.EntityId, new Construct(grid));
+                _constructMap.TryAdd(grid.EntityId, grid.EntityId);
+                RegisterConstructEvents(_constructs[grid.EntityId]);
+                WriteGeneral(nameof(HandleConstruct), $"Single Grid Found: [{_reusableGridCollection.Count:00}] [{grid.EntityId}] {grid.DisplayName}");
                 return;
             }
 
             // if parentEntity = 0, then this grid collection isn't mapped yet
             // If parentEntity > 0, then this grid is part of a construct and needs to be mapped to it
             long parentEntity = ValidateConstructExists();
-            
+            WriteGeneral(nameof(HandleConstruct), $"Grid Collection Found: [{_reusableGridCollection.Count:00}] [{parentEntity:000000000000000000}] [{grid.EntityId}] {grid.DisplayName}");
             if (parentEntity == 0)
             {
                 long primaryConstruct = 0;
@@ -169,31 +174,45 @@ namespace HostileTakeover
                     if (i == 0)
                     {
                         primaryConstruct = _reusableGridCollection[i].EntityId;
-                        CreateNewConstruct((MyCubeGrid)_reusableGridCollection[i]);
+                        WriteGeneral($"{nameof(HandleConstruct)} [{primaryConstruct}]", $"A");
+
+                       _constructs.TryAdd(_reusableGridCollection[i].EntityId, new Construct((MyCubeGrid)_reusableGridCollection[i]));
+                        RegisterConstructEvents(_constructs[primaryConstruct]);
+                        WriteGeneral($"{nameof(HandleConstruct)} [{primaryConstruct}]", $"B");
+                        _constructMap.TryAdd(_constructs[primaryConstruct].GridId, _constructs[primaryConstruct].GridId);
+                        WriteGeneral($"{nameof(HandleConstruct)} [{primaryConstruct}]", $"C");
                         continue;
                     }
+                    WriteGeneral($"{nameof(HandleConstruct)} [{primaryConstruct}]", $"D");
                     _constructs[primaryConstruct].Add((MyCubeGrid)_reusableGridCollection[i]);
+                    WriteGeneral($"{nameof(HandleConstruct)} [{primaryConstruct}]", $"E");
                     _constructMap.TryAdd(_reusableGridCollection[i].EntityId, primaryConstruct);
+                    WriteGeneral($"{nameof(HandleConstruct)} [{primaryConstruct}]", $"F");
                 }
-                WriteGeneral($"{nameof(HandleConstruct)} [{parentEntity}]", _constructs[parentEntity].ToString());
+                WriteGeneral($"{nameof(HandleConstruct)} [{primaryConstruct}]", $"G [{(_constructs.ContainsKey(primaryConstruct) ? "T" : "F")}]");
                 return;
             }
 
             foreach (IMyCubeGrid subGrid in _reusableGridCollection)
             {
+                if (_constructMap.ContainsKey(subGrid.EntityId)) continue;
                 _constructs[parentEntity].Add((MyCubeGrid)subGrid);
                 _constructMap.TryAdd(subGrid.EntityId, parentEntity);
             }
-            WriteGeneral($"{nameof(HandleConstruct)} [{parentEntity}]", _constructs[parentEntity].ToString());
         }
 
-        private void CreateNewConstruct(MyCubeGrid grid)
+        //private void CreateNewConstruct(MyCubeGrid grid)
+        //{
+        //    var construct = new Construct(grid);
+            
+        //    _constructs.TryAdd(grid.EntityId, construct);
+        //    _constructMap.TryAdd(grid.EntityId, grid.EntityId);
+        //}
+
+        private void RegisterConstructEvents(Construct construct)
         {
-            var construct = new Construct(grid);
             construct.OnCloseConstruct += CloseConstruct;
             construct.OnWriteToLog += WriteGeneral;
-            _constructs.TryAdd(grid.EntityId, construct);
-            _constructMap.TryAdd(grid.EntityId, grid.EntityId);
         }
 
         private long ValidateConstructExists()
@@ -209,7 +228,7 @@ namespace HostileTakeover
         private List<MyEntity> GrabNearbyGrids(Vector3D center)
         {
             _entList.Clear();
-            var pruneSphere = new BoundingSphereD(center, 200);
+            var pruneSphere = new BoundingSphereD(center, DetectionRange);
             MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref pruneSphere, _entList);
             for (int i = _entList.Count - 1; i >= 0; i--)
             {
@@ -222,12 +241,14 @@ namespace HostileTakeover
 		private void RunGrinderLogic(IMyAngleGrinder grinder)
         {
             List<MyEntity> entList = GrabNearbyGrids(grinder.GetPosition());
-            WriteGeneral(nameof(RunGrinderLogic), $"Grinder: [{grinder.OwnerIdentityId}] [{grinder.OwnerId}] [{entList.Count}]");
+            WriteGeneral(nameof(RunGrinderLogic), $"Grinder: [{grinder.OwnerIdentityId:000000000000000000}] [{grinder.OwnerId:000000000000000000}] [{entList.Count:00}]");
             foreach (MyEntity target in entList)
             {
+                WriteGeneral(nameof(RunGrinderLogic), $"Looking for: {target.EntityId} [{_constructMap.ContainsKey(target.EntityId)}] []");
+                PrintConstructMap();
                 if (_constructMap.ContainsKey(target.EntityId) && grinder.OwnerIdentityId != 0)
                     _constructs[_constructMap[target.EntityId]].EnableBlockHighlights(grinder.OwnerIdentityId);
-				WriteGeneral(nameof(RunGrinderLogic), $"[{target.EntityId}] [{((MyCubeGrid)target).DisplayName}]");
+				//WriteGeneral(nameof(RunGrinderLogic), $"[{target.EntityId}] [{((MyCubeGrid)target).DisplayName}]");
             }
         }
 
@@ -239,6 +260,14 @@ namespace HostileTakeover
                 _constructMap.Remove(construct.GridId);
             construct.OnWriteToLog -= WriteGeneral;
 			construct.OnCloseConstruct -= CloseConstruct;
+        }
+
+        private void PrintConstructMap()
+        {
+            foreach (var kvp in _constructMap)
+            {
+                WriteGeneral(nameof(PrintConstructMap), $"[{kvp.Key:000000000000000000}] [{kvp.Value:000000000000000000}]");
+            }
         }
     }
 }
