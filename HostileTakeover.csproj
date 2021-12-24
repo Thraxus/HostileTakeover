@@ -123,6 +123,7 @@
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Enums\CompType.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Enums\FactionRelationship.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Enums\LogType.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Extensions\Bools.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Factions\DataTypes\Enums\FactionTypes.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Factions\Models\FactionDictionaries.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Factions\Models\Settings.cs" />
@@ -147,7 +148,6 @@
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\HostileTakeoverCore.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Models\Construct.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\References\ImportantBlocks.cs" />
-    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Models\OwnedGrids.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

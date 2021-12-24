@@ -3,11 +3,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using HostileTakeover.Common.BaseClasses;
+using HostileTakeover.Common.Extensions;
+using HostileTakeover.Common.Utilities.Statics;
 using Sandbox.Common.ObjectBuilders;
 using Sandbox.Game;
 using Sandbox.Game.Entities;
-using Sandbox.Game.Entities.Cube;
-using Sandbox.Game.GameSystems;
 using Sandbox.ModAPI;
 using SpaceEngineers.Game.ModAPI;
 using VRage.Game;
@@ -28,7 +28,7 @@ namespace HostileTakeover.Models
         /// <summary>
         /// Owner of the grid used for all ownership changes
         /// </summary>
-        private readonly long _gridOwner;
+        private long _gridOwner;
 
         /// <summary>
         /// This is the first grid in this construct - used only for the closing event
@@ -47,32 +47,6 @@ namespace HostileTakeover.Models
         /// </summary>
         private readonly HashSet<MyCubeGrid> _grids = new HashSet<MyCubeGrid>();
 
-        ///// <summary>
-        ///// Stores all the blocks actively being tracked as important
-        /////     Once this list is empty, the entire construct is disowned
-        /////     (long, MyCubeBlock) => (blockId, block)
-        ///// </summary>
-        //private readonly ConcurrentDictionary<long, MyCubeBlock> _activeControlBlocks = new ConcurrentDictionary<long, MyCubeBlock>();
-
-        ///// <summary>
-        ///// Stores all the blocks actively being tracked as important
-        /////     Once this list is empty, the entire construct is disowned
-        /////     (long, MyCubeBlock) => (blockId, block)
-        ///// </summary>
-        //private readonly ConcurrentDictionary<long, MyCubeBlock> _activeWeaponBlocks = new ConcurrentDictionary<long, MyCubeBlock>();
-
-        /// <summary>
-        /// Stores all the blocks that are tracked
-        /// </summary>
-        private readonly HashSet<MyCubeBlock> _activeBlocks2 = new HashSet<MyCubeBlock>();
-
-        ///// <summary>
-        ///// Stores all the blocks that were once tracked, or that should have been tracked had they been operational when scanned
-        /////	    This is required to account for partially built blocks or blocks that may be repaired at some point
-        /////     (long, MyCubeBlock) => (blockId, block)
-        ///// </summary>
-        //private readonly HashSet<MyCubeBlock> _inactiveBlocks = new HashSet<MyCubeBlock>();
-
         /// <summary>
         /// Contains a queue of generic actions that fire on a 10 tick schedule from the mod core
         /// </summary>
@@ -90,14 +64,18 @@ namespace HostileTakeover.Models
         /// </summary>
         private readonly ConcurrentDictionary<long, HashSet<HighlightedBlocks>> _highlightedBlocks = new ConcurrentDictionary<long, HashSet<HighlightedBlocks>>();
 
+        private readonly StringBuilder _report = new StringBuilder();
+
         /// <summary>
         /// Time a block should be highlighted for
         /// </summary>
         private const long HighlightDuration = Common.Settings.TicksPerSecond * 10;
 
         private const int HighlightPulseDuration = 10;
+        
+        private bool _npcOwned;
 
-        private const int DetectionRange = 50;
+        private readonly MyCubeGrid _mainGrid;
 
         /// <summary>
         /// Private class that controls basic highlighted block data
@@ -117,8 +95,42 @@ namespace HostileTakeover.Models
         public Construct(MyCubeGrid grid)
         {
             GridId = grid.EntityId;
-            _gridOwner = grid.BigOwners.Count > 0 ? grid.BigOwners[0] : 0;
-			Add(grid);
+            _mainGrid = grid;
+            SetGridOwner();
+            _npcOwned = IsNpcOwned();
+            Add(grid);
+        }
+
+        private void SetGridOwner()
+        {
+            _gridOwner = _mainGrid.BigOwners.Count > 0 ? _mainGrid.BigOwners[0] : 0;
+        }
+
+        private bool IsNpcOwned()
+        {
+            return _mainGrid.BigOwners.Count != 0 && MyAPIGateway.Players.TryGetSteamId(_mainGrid.BigOwners[0]) <= 0;
+        }
+        
+        private void GridOnClose(MyEntity grid)
+        {
+            // There is no reason to close out the important blocks from this grid.
+            // When the grid closes, the blocks will close, which will prune them from the other dictionaries
+            WriteToLog(nameof(GridOnClose), $"Closing grid: [{grid.EntityId:D18}] ");
+            GridDeRegisterCommonEvents((MyCubeGrid)grid);
+            if (IsNpcOwned()) GridDeRegisterNpcEvents((MyCubeGrid)grid);
+            _grids.Remove((MyCubeGrid)grid);
+            if (_grids.Count == 0) Close();
+        }
+
+        /// <summary>
+        /// Closes the construct
+        /// </summary>
+        public override void Close()
+        {
+            WriteToLog(nameof(GridOnClose), $"Closing construct: [{GridId:D18}] [{_grids.Count:D2}]");
+            _grids.Clear();
+            OnCloseConstruct?.Invoke(this);
+            base.Close();
         }
 
         /// <summary>
@@ -126,38 +138,164 @@ namespace HostileTakeover.Models
         /// Also sets up all grid level event registrations and identifies all important blocks
         /// </summary>
         /// <param name="grid"></param>
-		public void Add(MyCubeGrid grid)
+        public void Add(MyCubeGrid grid)
         {
-            if (_grids.Contains(grid)) return;
-			_grids.Add(grid);
-			GridRegisterEvents(grid);
-			FindImportantBlocks(grid);
-		}
+            _perTickDelayedActions.Enqueue(() =>
+            {
+                if (!_grids.Add(grid)) return;
+                GridRegisterCommonEvents(grid);
 
-        /// <summary>
-        /// Registers all grid level events we care about
-        /// </summary>
-        /// <param name="grid"></param>
-        private void GridRegisterEvents(MyCubeGrid grid)
-        {   
-            grid.OnFatBlockAdded += OnFatBlockAdded;
-            //grid.OnFatBlockRemoved += OnFatBlockClosed;
-            grid.OnFatBlockClosed += OnFatBlockClosed;
-            grid.OnGridSplit += OnGridSplit;
-            grid.OnClose += GridOnClose;
+                if (IsNpcOwned()) return;
+
+                GridRegisterNpcEvents(grid);
+                FindImportantBlocks(grid);
+            });
         }
 
         /// <summary>
-        /// Cleans up any grid level events for closed grids
+        /// Sets the ownership of the grid to nobody (id = 0)
+        /// </summary>
+        private void DisownGrid()
+        {
+            //WriteToLog(nameof(DisownGrid), $"Disowning Grid.");
+            foreach (var grid in _grids)
+                GridSetNoOwnership(grid);
+            DeRegisterAllImportantBlockEvents();
+        }
+        
+        /// <summary>
+        /// Determines whether a grid should be subject to logic or not
+        /// Logic should only run on NPC owned grids
         /// </summary>
         /// <param name="grid"></param>
-        private void GridDeRegisterEvents(MyCubeGrid grid)
+        private void GridOnBlockOwnershipChanged(MyCubeGrid grid)
         {
-			grid.OnFatBlockAdded -= OnFatBlockAdded;
-            //grid.OnFatBlockRemoved -= OnFatBlockClosed;
+            bool wasNpcOwned = _npcOwned;
+            _npcOwned = IsNpcOwned();
+            WriteToLog(nameof(GridOnBlockOwnershipChanged), $"Was Npc Owned: [{wasNpcOwned.ToSingleChar()}]");
+            WriteToLog(nameof(GridOnBlockOwnershipChanged), $" Is Npc Owned: [{IsNpcOwned().ToSingleChar()}]");
+            //if (wasNpcOwned == IsNpcOwned()) return;
+
+            _report.Clear();
+            _report.AppendLine();
+            _report.AppendLine();
+            _report.AppendFormat("{0,-2}**** {1} ****", " ", nameof(GridOnBlockOwnershipChanged));
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4}Grid Tick: [{1:D18}]", " ", _gridTick);
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4}Was Npc Owned: [{1}]", " ", wasNpcOwned.ToSingleChar());
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4} Is Npc Owned: [{1}]", " ", IsNpcOwned().ToSingleChar());
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4}     No Owner: [{1}]", " ", (grid.BigOwners.Count == 0).ToSingleChar());
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4}Main Grid: [{1:D18}] {2}", " ", _mainGrid.EntityId, _mainGrid.DisplayName);
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4}Act Owner: [{1:D18}]", " ", _mainGrid.BigOwners.Count > 0 ? _mainGrid.BigOwners[0] : 0);
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4}Rec Owner: [{1:D18}]", " ", _gridOwner);
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4}Triggered Grid: [{1:D18}] {2}", " ", grid.EntityId, grid.DisplayName);
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4}         Owner: [{1:D18}]", " ", grid.BigOwners.Count > 0 ? grid.BigOwners[0] : 0);
+            _report.AppendLine();
+            _report.AppendLine();
+            
+            // Was NPC Owned: False
+            //  Is NPC Owned: True
+            // == Was player owned, now is NPC owned, need to setup scanning for blocks
+
+            // Was NPC Owned: False
+            //  Is NPC Owned: False
+            // == Was not NPC owned and is still not NPC owned, Do nothing
+
+            // Was NPC Owned: True
+            //  Is NPC Owned: False
+            // == Was NPC owned and, now is not NPC Owned, deRegister everything
+
+            if (!wasNpcOwned && IsNpcOwned())
+            {
+                _report.AppendFormat("{0,-4}Running: Some other owner and is now NPC Owned logic...", " ");
+                _report.AppendLine();
+                _gridOwner = _mainGrid.BigOwners[0];
+                //_npcOwned = IsNpcOwned();
+                foreach (var subGrid in _grids)
+                {
+                    _report.AppendFormat("{0,-6}Processing: [{1:D18}] {2}", " ", subGrid.EntityId, subGrid.DisplayName);
+                    _report.AppendLine();
+                    GridRegisterNpcEvents(subGrid);
+                    FindImportantBlocks(subGrid);
+                }
+                _report.AppendLine();
+                WriteToLog(nameof(GridOnBlockOwnershipChanged), _report.ToString());
+                return;
+            }
+
+            if (wasNpcOwned && !IsNpcOwned())
+            {
+                _report.AppendFormat("{0,-4}Running: Was NPC Owned Now some other owner...", " ");
+                _report.AppendLine();
+                _gridOwner = _mainGrid.BigOwners.Count == 0 ? 0 : _mainGrid.BigOwners[0];
+                //_npcOwned = IsNpcOwned();
+                foreach (var subGrid in _grids)
+                {
+                    _report.AppendFormat("{0,-6}Processing: [{1:D18}] {2}", " ", subGrid.EntityId, subGrid.DisplayName);
+                    _report.AppendLine();
+                    GridDeRegisterNpcEvents(subGrid);
+                    DeRegisterAllImportantBlockEvents();
+                }
+                _report.AppendLine();
+                WriteToLog(nameof(GridOnBlockOwnershipChanged), _report.ToString());
+                return;
+            }
+
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4}Ownership unchanged... nothing to see here!", " ");
+            _report.AppendLine();
+            WriteToLog(nameof(GridOnBlockOwnershipChanged), _report.ToString());
+        }
+        
+        private void DeRegisterAllImportantBlockEvents()
+        {
+            foreach (var kvp in _importantBlocks)
+            {
+                foreach (MyCubeBlock block in kvp.Value)
+                {
+                    BlockDeRegisterEvents(block);
+                }
+            }
+            _importantBlocks[_control].Clear();
+            _importantBlocks[_medical].Clear();
+            _importantBlocks[_weapon].Clear();
+            _importantBlocks[_trap].Clear();
+        }
+
+        private void GridRegisterCommonEvents(MyCubeGrid grid)
+        {
+            grid.OnBlockOwnershipChanged += GridOnBlockOwnershipChanged;
+            grid.OnClose += GridOnClose;
+        }
+
+        private void GridRegisterNpcEvents(MyCubeGrid grid)
+        {
+            grid.OnFatBlockAdded += OnFatBlockAdded;
+            grid.OnFatBlockClosed += OnFatBlockClosed;
+            grid.OnGridSplit += OnGridSplit;
+            MyCubeGrid.OnSplitGridCreated += OnSplitGridCreated;
+        }
+
+        private void GridDeRegisterCommonEvents(MyCubeGrid grid)
+        {
+            grid.OnBlockOwnershipChanged -= GridOnBlockOwnershipChanged;
+            grid.OnClose -= GridOnClose;
+        }
+
+        private void GridDeRegisterNpcEvents(MyCubeGrid grid)
+        {
+            grid.OnFatBlockAdded -= OnFatBlockAdded;
             grid.OnFatBlockClosed -= OnFatBlockClosed;
             grid.OnGridSplit -= OnGridSplit;
-            grid.OnClose -= GridOnClose;
+            MyCubeGrid.OnSplitGridCreated -= OnSplitGridCreated;
         }
 
         /// <summary>
@@ -198,13 +336,55 @@ namespace HostileTakeover.Models
         /// <param name="newGrid"></param>
 		private void OnGridSplit(MyCubeGrid oldGrid, MyCubeGrid newGrid)
 		{
-            //WriteToLog(nameof(OnGridSplit), $"Grid split detected: {oldGrid.EntityId} | {newGrid.EntityId}");
+            _report.Clear();
+            _report.AppendLine();
+            _report.AppendLine();
+            _report.AppendFormat("{0,-2}**** {1} ****", " ", nameof(OnGridSplit));
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4}Parent Grid: [{1:D18}] {2}", " ", _mainGrid.EntityId, _mainGrid.DisplayName);
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4}   Old Grid: [{1:D18}] {2}", " ", oldGrid.EntityId, oldGrid.DisplayName);
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4}   New Grid: [{1:D18}] {2}", " ", newGrid.EntityId, newGrid.DisplayName);
+            _report.AppendLine();
+            foreach (var gridX in _grids)
+            {
+                _report.AppendFormat("{0,-6}Related Grid: [{1:D18}] {2}", " ", gridX.EntityId, gridX.DisplayName);
+                _report.AppendLine();
+            }
+            _report.AppendLine();
+
+            WriteToLog(nameof(OnGridSplit), _report.ToString());
+
+            //WriteToLog(nameof(OnGridSplit), $"Grid split detected: {oldGrid.EntityId:D18} | {newGrid.EntityId:D18}");
 			foreach (var block in newGrid.GetFatBlocks())
             {
                 if (!(block is IMyTerminalBlock)) continue;
                 CloseBlock(block);
             }
 		}
+
+        private void OnSplitGridCreated(MyCubeGrid grid)
+        {
+            _report.Clear();
+            _report.AppendLine();
+            _report.AppendLine();
+            _report.AppendFormat("{0,-2}**** {1} ****", " ", nameof(OnSplitGridCreated));
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4}Parent Grid: [{1:D18}] {2}", " ", _mainGrid.EntityId, _mainGrid.DisplayName);
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4} Split Grid: [{1:D18}] {2}", " ", grid.EntityId, _mainGrid.DisplayName);
+            _report.AppendLine();
+            _report.AppendLine();
+            foreach (var gridX in _grids)
+            {
+                _report.AppendFormat("{0,-6}Related Grid: [{1:D18}] {2}", " ", gridX.EntityId, gridX.DisplayName);
+                _report.AppendLine();
+            }
+            _report.AppendLine();
+
+            WriteToLog(nameof(OnSplitGridCreated), _report.ToString());
+        }
 
         /// <summary>
         /// Disowns the grid
@@ -213,10 +393,11 @@ namespace HostileTakeover.Models
         /// Requires further testing
         /// </summary>
         /// <param name="grid"></param>
-		private static void GridSetOwnership(MyCubeGrid grid)
+		private void GridSetNoOwnership(MyCubeGrid grid)
 		{
-			grid.ChangeGridOwnership(0, MyOwnershipShareModeEnum.All);
-		}
+            _gridOwner = 0;
+            grid.ChangeGridOwnership(_gridOwner, MyOwnershipShareModeEnum.All);
+        }
 
         /// <summary>
         /// Closes out a block
@@ -291,13 +472,16 @@ namespace HostileTakeover.Models
         /// <param name="block"></param>
         private void IdentifyImportantBlock(MyCubeBlock block)
         {
+            if (!IsNpcOwned()) return;
             if (!(block is IMyTerminalBlock)) return;
             _10TickDelayedActions.Enqueue(() =>
             {
                 if (!AssignBlock(block)) return;
                 BlockRegisterEvents(block);
+                CheckBlockBalance();
                 //WriteToLog(nameof(IdentifyImportantBlock), $"Adding to important blocks: [{block.GetType()}] [{block.BlockDefinition.Id.TypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
             });
+            
         }
 
         private bool AssignBlock(MyCubeBlock block)
@@ -375,8 +559,6 @@ namespace HostileTakeover.Models
         {
             foreach (var kvp in _importantBlocks)
                 WriteToLog(nameof(RemoveFromImportantBlocks), $"Removing important block: [{(kvp.Value.Remove(block) ? "T" : "F")}] {block.BlockDefinition.Id.SubtypeName}");
-            //kvp.Value.Remove(block);
-            //WriteToLog(nameof(RemoveFromImportantBlocks), $"Removing important block: {block.BlockDefinition.Id.SubtypeName}");
         }
 
         /// <summary>
@@ -406,12 +588,7 @@ namespace HostileTakeover.Models
         /// <param name="block"></param>
 		private void BlockOnWorkingChanged(MyCubeBlock block)
         {   
-            // TODO OnWorkingChanged and OnOwnershipChange kinda do the same thing on the block level.  Consider combining efforts and/or only hooking one of the events
-            // Example: Working changed can fire if the block is disabled or repaired, but being disabled also fires an ownership change (most of the time).
-            //  So, why hook both events?  OnWorkingChange should cover for Ownership change as well as I can decide to act on ownership requirements based on 
-            //  if the block is working or not.
             SetAppropriateOwnership(block);
-            //WriteToLog(nameof(BlockOnWorkingChanged), $"Working Change Detected: [{(block.IsWorking ? "T" : "F")}] [{block.EntityId}] [{block.BlockDefinition.Id.SubtypeName}]");
         }
 
         /// <summary>
@@ -422,7 +599,6 @@ namespace HostileTakeover.Models
 		private void BlockOnOwnershipChanged(IMyTerminalBlock block)
 		{
             SetAppropriateOwnership((MyCubeBlock)block);
-            //WriteToLog(nameof(BlockOnOwnershipChanged), $"Ownership Change Detected: [{(block.IsWorking ? "T" : "F")}] [{block.EntityId}] [{block.BlockDefinition.SubtypeName}]");
         }
 
         /// <summary>
@@ -435,6 +611,8 @@ namespace HostileTakeover.Models
                 {
                     //WriteToLog(nameof(SetAppropriateOwnership), $"Ownership Change Requested: [{(block.IsWorking ? "T" : "F")}] [{block.EntityId}] [{block.BlockDefinition.Id.SubtypeName}]");
                     if (block.MarkedForClose) return;
+                    if (_gridOwner == 0) return;
+                    if (!IsNpcOwned()) return;
                     var tb = block as IMyTerminalBlock;
                     if (tb == null) return;
                     if (block.IsWorking && block.OwnerId != _gridOwner)
@@ -453,8 +631,6 @@ namespace HostileTakeover.Models
         private void ClaimBlock(MyCubeBlock block)
         {
             block.ChangeOwner(_gridOwner, MyOwnershipShareModeEnum.Faction);
-            //TrackBlock(block);
-            //WriteToLog(nameof(ClaimBlock), $"Claiming: [{(block.IsWorking ? "T" : "F")}] [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
         }
 
         /// <summary>
@@ -464,33 +640,13 @@ namespace HostileTakeover.Models
         private void DisownBlock(MyCubeBlock block)
         {   
             block.ChangeOwner(0, MyOwnershipShareModeEnum.All);
-            //CheckBlockBalance();
-            //UntrackBlock(block);
-            //WriteToLog(nameof(DisownBlock), $"Disowning: [{(block.IsWorking ? "T" : "F")}] [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
         }
-
-        //private bool TrackBlock(MyCubeBlock block)
-        //{
-        //    WriteToLog(nameof(TrackBlock), $"Tracking: [{(block.IsWorking ? "T" : "F")}] [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
-        //    return block.IsWorking && _activeBlocks.Add(block);
-        //}
-
-        //private bool UntrackBlock(MyCubeBlock block)
-        //{
-        //    WriteToLog(nameof(UntrackBlock), $"No longer tracking: [{(block.IsWorking ? "T" : "F")}] [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
-        //    if (block.IsWorking) return false;
-        //    if (!_activeBlocks.Remove(block)) return false;
-        //    CheckBlockBalance();
-        //    return true;
-        //}
-
-        /// TODO Need to only care about active (i.e. working) blocks in the below collections when sending for highlighting...
 
         private readonly HashSet<MyCubeBlock> _reusableBlocksCollection = new HashSet<MyCubeBlock>();
 
         public void EnableBlockHighlights(long playerId)
         {
-            WriteToLog(nameof(EnableBlockHighlights), this.ToString());
+            //WriteToLog(nameof(EnableBlockHighlights), this.ToString());
             _reusableBlocksCollection.Clear();
             if (_importantBlocks[_control].Count > 0)
             {
@@ -546,9 +702,7 @@ namespace HostileTakeover.Models
             EnableBlockListHighlights(blocks, playerId, color);
             return true;
         }
-
-        // MyTuple<long, MyCubeBlock, long, Color> hlb = new MyTuple<long, MyCubeBlock, long, Color>();
-
+        
         private void EnableBlockListHighlights(HashSet<MyCubeBlock> blocks, long playerId, Color color)
         {
             var hlb = new HighlightedBlocks()
@@ -616,6 +770,11 @@ namespace HostileTakeover.Models
             HashSet<HighlightedBlocks> blocks;
             if (_highlightedBlocks.TryRemove(_gridTick, out blocks))
                 DisableHighlights(blocks);
+
+            while (_perTickDelayedActions.Count > 0)
+            {
+                _perTickDelayedActions.Dequeue()?.Invoke();
+            }
         }
 
         private bool CheckAnyActiveBlocksExist()
@@ -650,46 +809,13 @@ namespace HostileTakeover.Models
         /// </summary>
 		private void CheckBlockBalance()
         {
-            //WriteToLog(nameof(CheckBlockBalance), $"{GetActiveBlockList().Count}");
+            if (!IsNpcOwned()) return;
+            WriteToLog(nameof(CheckBlockBalance), $"{GetActiveBlockList().Count:D2}");
             if (CheckAnyActiveBlocksExist()) return;
             DisownGrid();
 			//if (_activeBlocks.Count == 0)
 				//DisownGrid();
 		}
-
-        /// <summary>
-        /// Sets the ownership of the grid to nobody (id = 0)
-        /// TODO: Evaluate why this fails to change all ownership; specifically that of nonworking blocks which didn't properly drop ownership when hacked / disabled
-        /// </summary>
-        private void DisownGrid()
-		{
-            //WriteToLog(nameof(DisownGrid), $"Disowning Grid.");
-            foreach (var grid in _grids)
-				GridSetOwnership(grid);
-			Close();
-		}
-		
-        private void GridOnClose(MyEntity grid)
-        {
-            // There is no reason to close out the important blocks from this grid.
-            // When the grid closes, the blocks will close, which will prune them from the other dictionaries
-            GridDeRegisterEvents((MyCubeGrid)grid);
-            _grids.Remove((MyCubeGrid)grid);
-            if (_grids.Count == 0) Close();
-        }
-
-        /// <summary>
-        /// Closes the construct
-        /// </summary>
-        public override void Close()
-        {
-            foreach (var kvp in _importantBlocks)
-                kvp.Value.Clear();
-            //_activeBlocks.Clear();                   
-            _grids.Clear();
-            OnCloseConstruct?.Invoke(this);
-            base.Close();
-        }
 
 		/// <summary>
         /// Gets the nearest block to the source
@@ -713,20 +839,47 @@ namespace HostileTakeover.Models
 
         public override void WriteToLog(string caller, string message)
         {
-            base.WriteToLog($"[{GridId}] {caller}", message);
+            base.WriteToLog($"[{GridId:D18}] {caller}", message);
         }
 
-        private readonly StringBuilder _report = new StringBuilder();
-		
-		public override string ToString()
-		{
-			_report.Clear();
+        #region Debug Printouts
+        
+        private void PrintOwnersInfo()
+        {
+            PrintMainGridInfo();
+            if (_mainGrid.BigOwners.Count == 0) return;
+            IMyPlayer player = MyAPIGateway.Players.GetPlayerById(_mainGrid.BigOwners[0]);
+            if (player != null)
+            {
+                WriteToLog(nameof(PrintOwnersInfo), $"BigOwner[0]: [{player.IdentityId:D18}] [{player.DisplayName}]");
+                WriteToLog(nameof(PrintOwnersInfo), $"BigOwner[0]: Is Bot [{player.IsBot.ToSingleChar()}] Is Player [{player.Character.IsPlayer.ToSingleChar()}]");
+            }
+            else
+            {
+                WriteToLog(nameof(PrintOwnersInfo), $"BigOwner[0]: IMyPlayer was NULL");
+            }
+
+            foreach (var owner in _mainGrid.BigOwners)
+            {
+                WriteToLog(nameof(PrintOwnersInfo), $"All Owners: [{owner:D18}]");
+            }
+        }
+        
+        private void PrintMainGridInfo()
+        {
+            WriteToLog(nameof(PrintMainGridInfo), $"[{_mainGrid.EntityId:D18}] {_mainGrid.DisplayName}");
+            WriteToLog(nameof(PrintMainGridInfo), $"BigOwner[0]: [{(_mainGrid.BigOwners.Count > 0 ? _mainGrid.BigOwners[0] : 0):D18}] {_mainGrid.DisplayName}");
+        }
+
+        public override string ToString()
+        {
+            _report.Clear();
             _report.AppendLine();
             _report.AppendLine();
-            _report.AppendFormat("{0,-2}Report for Grid Construct: [{1:000000000000000000}]", "", GridId);
-			_report.AppendLine();
-            _report.AppendFormat("{0,-4}Owner: {1}"," ", _gridOwner);
-			_report.AppendLine();
+            _report.AppendFormat("{0,-2}Report for Grid Construct: [{1:D18}]", "", GridId);
+            _report.AppendLine();
+            _report.AppendFormat("{0,-4}Owner: {1}", " ", _gridOwner);
+            _report.AppendLine();
             _report.AppendLine();
 
             _report.AppendFormat("{0,-4}***** Grids [{1}] *****", " ", _grids.Count);
@@ -741,11 +894,11 @@ namespace HostileTakeover.Models
             _report.AppendFormat("{0,-4}***** Active Important Blocks *****", " ");
             _report.AppendLine();
             foreach (var block in GetActiveBlockList())
-			{
-                _report.AppendFormat("{0,-6}[{1,-18:000000000000000000}] TypeId: {2,-20}  SubtypeId: {3}", " ", block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
+            {
+                _report.AppendFormat("{0,-6}[{1,-18:D18}] TypeId: {2,-20}  SubtypeId: {3}", " ", block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
                 _report.AppendLine();
-			}
-            
+            }
+
             _report.AppendLine();
             _report.AppendFormat("{0,-4}***** Important Block Dictionary *****", " ");
             _report.AppendLine();
@@ -754,39 +907,44 @@ namespace HostileTakeover.Models
             _report.AppendLine();
             foreach (var block in _importantBlocks[_control])
             {
-                _report.AppendFormat("{0,-6}[{1}][{2,-18:000000000000000000}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsWorking ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
+                _report.AppendFormat("{0,-6}[{1}][{2,-18:D18}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsWorking ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
                 _report.AppendLine();
             }
-            
+
             _report.AppendLine();
             _report.AppendFormat("{0,-6}**** [{1:00}] Medical Blocks ****", " ", _importantBlocks[_medical].Count);
             _report.AppendLine();
             foreach (var block in _importantBlocks[_medical])
             {
-                _report.AppendFormat("{0,-6}[{1}][{2,-18:000000000000000000}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsWorking ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
+                _report.AppendFormat("{0,-6}[{1}][{2,-18:D18}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsWorking ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
                 _report.AppendLine();
             }
-            
+
             _report.AppendLine();
             _report.AppendFormat("{0,-6}**** [{1:00}] Weapon Blocks ****", " ", _importantBlocks[_weapon].Count);
             _report.AppendLine();
             foreach (var block in _importantBlocks[_weapon])
             {
-                _report.AppendFormat("{0,-6}[{1}][{2,-18:000000000000000000}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsWorking ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
+                _report.AppendFormat("{0,-6}[{1}][{2,-18:D18}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsWorking ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
                 _report.AppendLine();
             }
-            
+
             _report.AppendLine();
             _report.AppendFormat("{0,-6}**** [{1:00}] Trap Blocks ****", " ", _importantBlocks[_trap].Count);
             _report.AppendLine();
             foreach (var block in _importantBlocks[_trap])
             {
-                _report.AppendFormat("{0,-6}[{1}][{2,-18:000000000000000000}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsWorking ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
+                _report.AppendFormat("{0,-6}[{1}][{2,-18:D18}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsWorking ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
                 _report.AppendLine();
             }
 
             _report.AppendLine();
             return _report.ToString();
-		}
-	}
+        }
+        
+        // MyTuple<long, MyCubeBlock, long, Color> hlb = new MyTuple<long, MyCubeBlock, long, Color>();
+        
+        #endregion
+
+    }
 }

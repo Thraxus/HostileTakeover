@@ -111,14 +111,6 @@ namespace HostileTakeover
 
             WriteGeneral(nameof(UpdateAfterSimulation), $"Processing: [{grid.EntityId}] {grid.DisplayName}");
 
-            // I have no owner, so don't give me one, asshole. 
-            if (grid.BigOwners.Count == 0)
-            {
-                // TODO Consider not ignoring even if unowned.  It isn't owned now, but what about later?
-                WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as UNOWNED: [{grid.EntityId}] {grid.DisplayName}");
-                return;
-            }
-
             // I'm a projection!  Begone fool! ...or lend me your... components.
             if (grid.Physics == null)
             {
@@ -129,21 +121,30 @@ namespace HostileTakeover
             if (grid.IsStatic)
             {
                 IMyFaction faction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(grid.BigOwners[0]);
-                if (faction == null) return;
-                if (FactionDictionaries.VanillaTradeFactions.ContainsKey(faction.FactionId))
+                if (faction != null && FactionDictionaries.VanillaTradeFactions.ContainsKey(faction.FactionId))
                 {
                     WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as VANILLA TRADE: [{grid.EntityId}] {grid.DisplayName}");
                     return;
                 }
             }
-            // Catches player owned grids and ignores them
-            ulong id = MyAPIGateway.Players.TryGetSteamId(grid.BigOwners[0]);
-            if (id > 0)
-            {
-                // TODO Consider not ignoring player grids.  What if they transfer ownership to a NPC?  Just disabling logic if player owned would be smarter.
-                WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as PLAYER OWNED: [{grid.EntityId}] {grid.DisplayName}");
-                return;
-            }
+
+            //// I have no owner, so don't give me one, asshole. 
+            //if (grid.BigOwners.Count == 0)
+            //{
+            //    // TODO Consider not ignoring even if unowned.  It isn't owned now, but what about later?
+            //    WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as UNOWNED: [{grid.EntityId}] {grid.DisplayName}");
+            //    return;
+            //}
+
+            
+            //// Catches player owned grids and ignores them
+            //ulong id = MyAPIGateway.Players.TryGetSteamId(grid.BigOwners[0]);
+            //if (id > 0)
+            //{
+            //    // TODO Consider not ignoring player grids.  What if they transfer ownership to a NPC?  Just disabling logic if player owned would be smarter.
+            //    WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as PLAYER OWNED: [{grid.EntityId}] {grid.DisplayName}");
+            //    return;
+            //}
             HandleConstruct(grid);
             WriteGeneral(nameof(RunNewGridLogic), $"New Grid: [{grid.EntityId}] {grid.DisplayName}");
 		}
@@ -153,61 +154,78 @@ namespace HostileTakeover
             PopulateGridList(grid);
             WriteGeneral(nameof(HandleConstruct), $"Processing Construct: [{_reusableGridCollection.Count:00}] [{grid.EntityId}] {grid.DisplayName}");
 
-            if (_reusableGridCollection.Count == 1)
-            {
-                _constructs.TryAdd(grid.EntityId, new Construct(grid));
-                _constructMap.TryAdd(grid.EntityId, grid.EntityId);
-                RegisterConstructEvents(_constructs[grid.EntityId]);
-                WriteGeneral(nameof(HandleConstruct), $"Single Grid Found: [{_reusableGridCollection.Count:00}] [{grid.EntityId}] {grid.DisplayName}");
-                return;
-            }
+            //if (_reusableGridCollection.Count == 1)
+            //{
+            //    _constructs.TryAdd(grid.EntityId, new Construct(grid));
+            //    _constructMap.TryAdd(grid.EntityId, grid.EntityId);
+            //    RegisterConstructEvents(_constructs[grid.EntityId]);
+            //    WriteGeneral(nameof(HandleConstruct), $"Single Grid Found: [{_reusableGridCollection.Count:00}] [{grid.EntityId}] {grid.DisplayName}");
+            //    return;
+            //}
 
             // if parentEntity = 0, then this grid collection isn't mapped yet
             // If parentEntity > 0, then this grid is part of a construct and needs to be mapped to it
-            long parentEntity = ValidateConstructExists();
+            long parentEntity = GetParentGrid();
             WriteGeneral(nameof(HandleConstruct), $"Grid Collection Found: [{_reusableGridCollection.Count:00}] [{parentEntity:000000000000000000}] [{grid.EntityId}] {grid.DisplayName}");
-            if (parentEntity == 0)
+            if (parentEntity == 0) parentEntity = _reusableGridCollection[0].EntityId;
             {
-                long primaryConstruct = 0;
-                for (int i = 0; i < _reusableGridCollection.Count; i++)
-                {
-                    if (i == 0)
-                    {
-                        primaryConstruct = _reusableGridCollection[i].EntityId;
-                        WriteGeneral($"{nameof(HandleConstruct)} [{primaryConstruct}]", $"A");
-
-                       _constructs.TryAdd(_reusableGridCollection[i].EntityId, new Construct((MyCubeGrid)_reusableGridCollection[i]));
-                        RegisterConstructEvents(_constructs[primaryConstruct]);
-                        WriteGeneral($"{nameof(HandleConstruct)} [{primaryConstruct}]", $"B");
-                        _constructMap.TryAdd(_constructs[primaryConstruct].GridId, _constructs[primaryConstruct].GridId);
-                        WriteGeneral($"{nameof(HandleConstruct)} [{primaryConstruct}]", $"C");
-                        continue;
-                    }
-                    WriteGeneral($"{nameof(HandleConstruct)} [{primaryConstruct}]", $"D");
-                    _constructs[primaryConstruct].Add((MyCubeGrid)_reusableGridCollection[i]);
-                    WriteGeneral($"{nameof(HandleConstruct)} [{primaryConstruct}]", $"E");
-                    _constructMap.TryAdd(_reusableGridCollection[i].EntityId, primaryConstruct);
-                    WriteGeneral($"{nameof(HandleConstruct)} [{primaryConstruct}]", $"F");
-                }
-                WriteGeneral($"{nameof(HandleConstruct)} [{primaryConstruct}]", $"G [{(_constructs.ContainsKey(primaryConstruct) ? "T" : "F")}]");
-                return;
+                _constructs.TryAdd(parentEntity, new Construct((MyCubeGrid)_reusableGridCollection[0]));
+                RegisterConstructEvents(_constructs[parentEntity]);
+                _constructMap.TryAdd(_constructs[parentEntity].GridId, _constructs[parentEntity].GridId);
             }
 
-            foreach (IMyCubeGrid subGrid in _reusableGridCollection)
+            if (_reusableGridCollection.Count <= 1) return;
+
+            for (int i = 1; i < _reusableGridCollection.Count; i++)
             {
-                if (_constructMap.ContainsKey(subGrid.EntityId)) continue;
-                _constructs[parentEntity].Add((MyCubeGrid)subGrid);
-                _constructMap.TryAdd(subGrid.EntityId, parentEntity);
+                _constructs[parentEntity].Add((MyCubeGrid)_reusableGridCollection[i]);
+                _constructMap.TryAdd(_reusableGridCollection[i].EntityId, parentEntity);
             }
+
+
+            //long primaryConstruct = 0;
+            //for (int i = 0; i < _reusableGridCollection.Count; i++)
+            //{
+            //    if (i == 0)
+            //    {
+            //        primaryConstruct = _reusableGridCollection[i].EntityId;
+
+            //        _constructs.TryAdd(_reusableGridCollection[i].EntityId, new Construct((MyCubeGrid)_reusableGridCollection[i]));
+            //        RegisterConstructEvents(_constructs[primaryConstruct]);
+            //        _constructMap.TryAdd(_constructs[primaryConstruct].GridId, _constructs[primaryConstruct].GridId);
+            //        continue;
+            //    }
+            //    _constructs[primaryConstruct].Add((MyCubeGrid)_reusableGridCollection[i]);
+            //    _constructMap.TryAdd(_reusableGridCollection[i].EntityId, primaryConstruct);
+            //}
+
+            //if (parentEntity == 0)
+            //{
+            //    long primaryConstruct = 0;
+            //    for (int i = 0; i < _reusableGridCollection.Count; i++)
+            //    {
+            //        if (i == 0)
+            //        {
+            //            primaryConstruct = _reusableGridCollection[i].EntityId;
+
+            //           _constructs.TryAdd(_reusableGridCollection[i].EntityId, new Construct((MyCubeGrid)_reusableGridCollection[i]));
+            //            RegisterConstructEvents(_constructs[primaryConstruct]);
+            //            _constructMap.TryAdd(_constructs[primaryConstruct].GridId, _constructs[primaryConstruct].GridId);
+            //            continue;
+            //        }
+            //        _constructs[primaryConstruct].Add((MyCubeGrid)_reusableGridCollection[i]);
+            //        _constructMap.TryAdd(_reusableGridCollection[i].EntityId, primaryConstruct);
+            //    }
+            //    return;
+            //}
+
+            //foreach (IMyCubeGrid subGrid in _reusableGridCollection)
+            //{
+            //    if (_constructMap.ContainsKey(subGrid.EntityId)) continue;
+            //    _constructs[parentEntity].Add((MyCubeGrid)subGrid);
+            //    _constructMap.TryAdd(subGrid.EntityId, parentEntity);
+            //}
         }
-
-        //private void CreateNewConstruct(MyCubeGrid grid)
-        //{
-        //    var construct = new Construct(grid);
-            
-        //    _constructs.TryAdd(grid.EntityId, construct);
-        //    _constructMap.TryAdd(grid.EntityId, grid.EntityId);
-        //}
 
         private void RegisterConstructEvents(Construct construct)
         {
@@ -215,12 +233,12 @@ namespace HostileTakeover
             construct.OnWriteToLog += WriteGeneral;
         }
 
-        private long ValidateConstructExists()
+        private long GetParentGrid()
         {
             foreach (IMyCubeGrid grid in _reusableGridCollection)
             {
                 if (!_constructMap.ContainsKey(grid.EntityId)) continue;
-                return grid.EntityId;
+                return _constructMap[grid.EntityId];
             }
             return 0;
         }
@@ -242,19 +260,26 @@ namespace HostileTakeover
         {
             List<MyEntity> entList = GrabNearbyGrids(grinder.GetPosition());
             WriteGeneral(nameof(RunGrinderLogic), $"Grinder: [{grinder.OwnerIdentityId:000000000000000000}] [{grinder.OwnerId:000000000000000000}] [{entList.Count:00}]");
+            PrintConstructMap();
             foreach (MyEntity target in entList)
             {
-                WriteGeneral(nameof(RunGrinderLogic), $"Looking for: {target.EntityId} [{_constructMap.ContainsKey(target.EntityId)}] []");
-                PrintConstructMap();
-                if (_constructMap.ContainsKey(target.EntityId) && grinder.OwnerIdentityId != 0)
-                    _constructs[_constructMap[target.EntityId]].EnableBlockHighlights(grinder.OwnerIdentityId);
-				//WriteGeneral(nameof(RunGrinderLogic), $"[{target.EntityId}] [{((MyCubeGrid)target).DisplayName}]");
+                if (grinder.OwnerIdentityId == 0) break;
+                WriteGeneral(nameof(RunGrinderLogic), $"Looking for: [{(_constructMap.ContainsKey(target.EntityId) ? "T" : "F")}] [{target.EntityId:000000000000000000}] [{grinder.OwnerIdentityId:000000000000000000}]");
+                if (!_constructMap.ContainsKey(target.EntityId)) continue;
+                WriteGeneral(nameof(RunGrinderLogic), $"Found: [{target.EntityId:000000000000000000}] with parent: [{_constructMap[target.EntityId]:000000000000000000}]");
+                if (!_constructs.ContainsKey(_constructMap[target.EntityId]))
+                {
+                    WriteGeneral(nameof(RunGrinderLogic), $"Construct lookup failed for: [{_constructMap[target.EntityId]:000000000000000000}]");
+                    continue;
+                }
+                _constructs[_constructMap[target.EntityId]].EnableBlockHighlights(grinder.OwnerIdentityId);
             }
         }
 
         private void CloseConstruct(Construct construct)
         {
-			if (_constructs.ContainsKey(construct.GridId))
+            WriteGeneral(nameof(CloseConstruct), $"Closing Construct: [{construct.GridId:000000000000000000}]");
+            if (_constructs.ContainsKey(construct.GridId))
                 _constructs.Remove(construct.GridId);
             if (_constructMap.ContainsKey(construct.GridId))
                 _constructMap.Remove(construct.GridId);
