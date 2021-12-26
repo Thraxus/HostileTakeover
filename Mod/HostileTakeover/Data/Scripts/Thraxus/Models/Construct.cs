@@ -145,7 +145,7 @@ namespace HostileTakeover.Models
                 if (!_grids.Add(grid)) return;
                 GridRegisterCommonEvents(grid);
 
-                if (IsNpcOwned()) return;
+                if (!IsNpcOwned()) return;
 
                 GridRegisterNpcEvents(grid);
                 FindImportantBlocks(grid);
@@ -491,7 +491,6 @@ namespace HostileTakeover.Models
             {
                 _importantBlocks[_control].Add(block);
                 SetAppropriateOwnership(block);
-                //WriteToLog(nameof(AssignBlock), $"Adding new Controller: [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
                 return true;
             }
 
@@ -500,7 +499,6 @@ namespace HostileTakeover.Models
             {
                 _importantBlocks[_medical].Add(block);
                 SetAppropriateOwnership(block);
-                //WriteToLog(nameof(AssignBlock), $"Adding new Medical: [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
                 return true;
             }
             
@@ -509,7 +507,6 @@ namespace HostileTakeover.Models
             {
                 _importantBlocks[_medical].Add(block);
                 SetAppropriateOwnership(block);
-               //WriteToLog(nameof(AssignBlock), $"Adding new Medical: [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
                 return true;
             }
 
@@ -518,7 +515,6 @@ namespace HostileTakeover.Models
             {
                 _importantBlocks[_weapon].Add(block);
                 SetAppropriateOwnership(block);
-                //WriteToLog(nameof(AssignBlock), $"Adding new Weapon: [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
                 return true;
             }
 
@@ -527,7 +523,6 @@ namespace HostileTakeover.Models
             {
                 _importantBlocks[_weapon].Add(block);
                 SetAppropriateOwnership(block);
-                //WriteToLog(nameof(AssignBlock), $"Adding new Weapon: [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
                 return true;
             }
 
@@ -536,7 +531,6 @@ namespace HostileTakeover.Models
             {
                 _importantBlocks[_trap].Add(block);
                 SetAppropriateOwnership(block);
-                //WriteToLog(nameof(AssignBlock), $"Adding new Trap: [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
                 return true;
             }
 
@@ -544,8 +538,16 @@ namespace HostileTakeover.Models
             {
                 _importantBlocks[_medical].Add(block);
                 SetAppropriateOwnership(block);
-                //WriteToLog(nameof(AssignBlock), $"Adding new Skit: [{block.BlockDefinition.Id.SubtypeId}] [{block.BlockDefinition.Id.SubtypeName}]");
                 return true;
+            }
+
+            var upgrade = block as IMyUpgradeModule;
+            if (upgrade != null && block.BlockDefinition.Id.SubtypeId == MyStringHash.GetOrCompute("BotSpawner"))
+            {
+                _importantBlocks[_weapon].Add(block);
+                SetAppropriateOwnership(block);
+                return true;
+
             }
 
             return false;
@@ -588,6 +590,7 @@ namespace HostileTakeover.Models
         /// <param name="block"></param>
 		private void BlockOnWorkingChanged(MyCubeBlock block)
         {   
+            WriteToLog(nameof(BlockOnWorkingChanged), $"Working Change Triggered: [{block.EntityId:D18}] {block.GetFriendlyName()}");
             SetAppropriateOwnership(block);
         }
 
@@ -615,9 +618,9 @@ namespace HostileTakeover.Models
                     if (!IsNpcOwned()) return;
                     var tb = block as IMyTerminalBlock;
                     if (tb == null) return;
-                    if (block.IsWorking && block.OwnerId != _gridOwner)
+                    if (block.IsFunctional && block.OwnerId != _gridOwner)
                         ClaimBlock(block);
-                    else if (!block.IsWorking && block.OwnerId != 0)
+                    else if (!block.IsFunctional && block.OwnerId != 0)
                         DisownBlock(block);
                     CheckBlockBalance();
                 }
@@ -654,7 +657,7 @@ namespace HostileTakeover.Models
                 foreach (var block in _importantBlocks[_control])
                 {
                     //WriteToLog(nameof(EnableBlockHighlights), $"{" ",-6}[{(block.IsWorking ? "T" : "F")}][{block.EntityId,-18:000000000000000000}] TypeId: {block.BlockDefinition.Id.TypeId,-20}  SubtypeId: {block.BlockDefinition.Id.SubtypeName}");
-                    if (block.IsWorking)
+                    if (block.IsFunctional)
                         _reusableBlocksCollection.Add(block);
                 }
             }
@@ -665,7 +668,7 @@ namespace HostileTakeover.Models
                 //WriteToLog(nameof(EnableBlockHighlights), $"Highlighting [{_importantBlocks[_medical].Count:00}] blocks.");
                 foreach (var block in _importantBlocks[_medical])
                 {
-                    if (block.IsWorking)
+                    if (block.IsFunctional)
                         _reusableBlocksCollection.Add(block);
                 }
             }
@@ -676,7 +679,7 @@ namespace HostileTakeover.Models
                 //WriteToLog(nameof(EnableBlockHighlights), $"Highlighting [{_importantBlocks[_weapon].Count:00}] blocks.");
                 foreach (var block in _importantBlocks[_weapon])
                 {
-                    if (block.IsWorking)
+                    if (block.IsFunctional)
                         _reusableBlocksCollection.Add(block);
                 }
             }
@@ -687,7 +690,7 @@ namespace HostileTakeover.Models
                 //WriteToLog(nameof(EnableBlockHighlights), $"Highlighting [{_importantBlocks[_trap].Count:00}] blocks.");
                 foreach (var block in _importantBlocks[_trap])
                 {
-                    if (block.IsWorking)
+                    if (block.IsFunctional)
                         _reusableBlocksCollection.Add(block);
                 }
             }
@@ -783,7 +786,7 @@ namespace HostileTakeover.Models
             {
                 foreach (var block in kvp.Value)
                 {
-                    if (!block.IsWorking) continue;
+                    if (!block.IsFunctional) continue;
                     return true;
                 }
             }
@@ -797,7 +800,7 @@ namespace HostileTakeover.Models
             {
                 foreach (var block in kvp.Value)
                 {
-                    if (!block.IsWorking) continue;
+                    if (!block.IsFunctional) continue;
                     activeBlocks.Add(block);
                 }
             }
@@ -907,7 +910,7 @@ namespace HostileTakeover.Models
             _report.AppendLine();
             foreach (var block in _importantBlocks[_control])
             {
-                _report.AppendFormat("{0,-6}[{1}][{2,-18:D18}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsWorking ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
+                _report.AppendFormat("{0,-6}[{1}][{2,-18:D18}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsFunctional ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
                 _report.AppendLine();
             }
 
@@ -916,7 +919,7 @@ namespace HostileTakeover.Models
             _report.AppendLine();
             foreach (var block in _importantBlocks[_medical])
             {
-                _report.AppendFormat("{0,-6}[{1}][{2,-18:D18}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsWorking ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
+                _report.AppendFormat("{0,-6}[{1}][{2,-18:D18}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsFunctional ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
                 _report.AppendLine();
             }
 
@@ -925,7 +928,7 @@ namespace HostileTakeover.Models
             _report.AppendLine();
             foreach (var block in _importantBlocks[_weapon])
             {
-                _report.AppendFormat("{0,-6}[{1}][{2,-18:D18}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsWorking ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
+                _report.AppendFormat("{0,-6}[{1}][{2,-18:D18}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsFunctional ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
                 _report.AppendLine();
             }
 
@@ -934,7 +937,7 @@ namespace HostileTakeover.Models
             _report.AppendLine();
             foreach (var block in _importantBlocks[_trap])
             {
-                _report.AppendFormat("{0,-6}[{1}][{2,-18:D18}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsWorking ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
+                _report.AppendFormat("{0,-6}[{1}][{2,-18:D18}] TypeId: {3,-20}  SubtypeId: {4}", " ", (block.IsFunctional ? "T" : "F"), block.EntityId, block.BlockDefinition.Id.TypeId, block.BlockDefinition.Id.SubtypeName);
                 _report.AppendLine();
             }
 

@@ -105,46 +105,32 @@ namespace HostileTakeover
             // I don't exist!  So why am I here...
             if (grid == null)
             {
-                WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as NULL.");
+                WriteGeneral(nameof(RunNewGridLogic), $"Grid Rejected as NULL.");
                 return;
             }
 
-            WriteGeneral(nameof(UpdateAfterSimulation), $"Processing: [{grid.EntityId}] {grid.DisplayName}");
+            WriteGeneral(nameof(RunNewGridLogic), $"Processing: [{grid.EntityId}] {grid.DisplayName}");
 
             // I'm a projection!  Begone fool! ...or lend me your... components.
             if (grid.Physics == null)
             {
-                WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as PROJECTION: [{grid.EntityId}] {grid.DisplayName}");
+                WriteGeneral(nameof(RunNewGridLogic), $"Grid Rejected as PROJECTION: [{grid.EntityId}] {grid.DisplayName}");
                 return;
             }
 
             if (grid.IsStatic)
             {
-                IMyFaction faction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(grid.BigOwners[0]);
-                if (faction != null && FactionDictionaries.VanillaTradeFactions.ContainsKey(faction.FactionId))
+                if (grid.BigOwners.Count > 0)
                 {
-                    WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as VANILLA TRADE: [{grid.EntityId}] {grid.DisplayName}");
-                    return;
+                    IMyFaction faction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(grid.BigOwners[0]);
+                    if (faction != null && FactionDictionaries.VanillaTradeFactions.ContainsKey(faction.FactionId))
+                    {
+                        WriteGeneral(nameof(RunNewGridLogic),
+                            $"Grid Rejected as VANILLA TRADE: [{grid.EntityId}] {grid.DisplayName}");
+                        return;
+                    }
                 }
             }
-
-            //// I have no owner, so don't give me one, asshole. 
-            //if (grid.BigOwners.Count == 0)
-            //{
-            //    // TODO Consider not ignoring even if unowned.  It isn't owned now, but what about later?
-            //    WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as UNOWNED: [{grid.EntityId}] {grid.DisplayName}");
-            //    return;
-            //}
-
-            
-            //// Catches player owned grids and ignores them
-            //ulong id = MyAPIGateway.Players.TryGetSteamId(grid.BigOwners[0]);
-            //if (id > 0)
-            //{
-            //    // TODO Consider not ignoring player grids.  What if they transfer ownership to a NPC?  Just disabling logic if player owned would be smarter.
-            //    WriteGeneral(nameof(UpdateAfterSimulation), $"Grid Rejected as PLAYER OWNED: [{grid.EntityId}] {grid.DisplayName}");
-            //    return;
-            //}
             HandleConstruct(grid);
             WriteGeneral(nameof(RunNewGridLogic), $"New Grid: [{grid.EntityId}] {grid.DisplayName}");
 		}

@@ -152,68 +152,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
-    <None Include="Mod\HostileTakeover\Data\AnimationControllers\AC_Astronaut.sbc" />
-    <None Include="Mod\HostileTakeover\Data\AnimationControllers\AC_Astronaut_Female.sbc" />
-    <None Include="Mod\HostileTakeover\Data\FinderToolDefinition.sbc" />
-    <None Include="Mod\HostileTakeover\Models\AngleGrinder.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Custom\AgAuCoFe-5.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Custom\FeCoAuPt-4.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Custom\FeNi-7.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Custom\FeNiAg-6.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Custom\FeNiCo-1.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Custom\FeSiNi-11.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Custom\FeStAg-3.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Custom\NiSi-10.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Custom\Si-2.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Custom\SiFe-8.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Custom\SiMg-9.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Scrap1.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Scrap10.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Scrap11.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Scrap2.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Scrap3.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Scrap4.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Scrap5.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Scrap6.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Scrap7.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Scrap8.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Components\Scrap9.mwm" />
-    <None Include="Mod\HostileTakeover\Models\ImperialWelder_Small.mwm" />
-    <None Include="Mod\HostileTakeover\Models\Welder.mwm" />
-    <None Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\format.xcf" />
+    <None Include="Mod\HostileTakeover\modinfo.sbmi" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Mod\HostileTakeover\Models\Weapons\" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\buttons\tool.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\buttons\tool_focus.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\bulletproof_glass.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\Cartridge_Icon.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\computer.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\construction_components.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\detector_components.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\display.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\explosives.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\field_emitter.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\girder.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\gravity_generator_components.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\interior_plate.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\large_steel_tube.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\medical_components.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\metal_grid.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\motor.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\power_cell.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\radio_communication_components.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\reactor_components.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\small_steel_tube.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\solar_cell.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\steel_plate.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\superconductor_conducts.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\Components\thrust_components.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\filter_ingot.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\WeaponGrinder.dds" />
-    <Content Include="Mod\HostileTakeover\Textures\GUI\Icons\WeaponWelder.dds" />
+    <Content Include="Mod\HostileTakeover\metadata.mod" />
+    <Content Include="Mod\HostileTakeover\Thumb.jpg" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
