@@ -69,10 +69,22 @@ namespace HostileTakeover.Models
         /// <summary>
         /// Time a block should be highlighted for
         /// </summary>
-        private const long HighlightDuration = Common.Settings.TicksPerSecond * 10;
+        private const long HighlightDuration = Common.Settings.TicksPerSecond * 60;
 
-        private const int HighlightPulseDuration = 10;
-        
+        private const int HighlightPulseDuration = 120;
+
+        private const int EnabledThickness = 10;
+
+        private const int DisabledThickness = -1;
+
+        private readonly Color _controlColor = Color.DodgerBlue;
+
+        private readonly Color _medicalColor = Color.Red;
+
+        private readonly Color _weaponColor = Color.Purple;
+
+        private readonly Color _trapColor = Color.LightSeaGreen;
+
         private bool _npcOwned;
 
         private readonly MyCubeGrid _mainGrid;
@@ -661,7 +673,7 @@ namespace HostileTakeover.Models
                         _reusableBlocksCollection.Add(block);
                 }
             }
-            if (CheckHighlightCollection(_reusableBlocksCollection, playerId, Color.Orange)) return;
+            if (CheckHighlightCollection(_reusableBlocksCollection, playerId, _controlColor)) return;
 
             if (_importantBlocks[_medical].Count > 0)
             {
@@ -672,7 +684,7 @@ namespace HostileTakeover.Models
                         _reusableBlocksCollection.Add(block);
                 }
             }
-            if (CheckHighlightCollection(_reusableBlocksCollection, playerId, Color.Red)) return;
+            if (CheckHighlightCollection(_reusableBlocksCollection, playerId, _medicalColor)) return;
 
             if (_importantBlocks[_weapon].Count > 0)
             {
@@ -683,7 +695,7 @@ namespace HostileTakeover.Models
                         _reusableBlocksCollection.Add(block);
                 }
             }
-            if (CheckHighlightCollection(_reusableBlocksCollection, playerId, Color.Yellow)) return;
+            if (CheckHighlightCollection(_reusableBlocksCollection, playerId, _weaponColor)) return;
 
             if (_importantBlocks[_trap].Count > 0)
             {
@@ -694,7 +706,7 @@ namespace HostileTakeover.Models
                         _reusableBlocksCollection.Add(block);
                 }
             }
-            if (CheckHighlightCollection(_reusableBlocksCollection, playerId, Color.Green)) return;
+            if (CheckHighlightCollection(_reusableBlocksCollection, playerId, _trapColor)) return;
         }
 
         private bool CheckHighlightCollection(HashSet<MyCubeBlock> blocks, long playerId, Color color)
@@ -731,12 +743,12 @@ namespace HostileTakeover.Models
 
         private static void EnableHighlight(MyCubeBlock block, long playerId, Color color)
         {
-            MyVisualScriptLogicProvider.SetHighlight(block.Name, true, 2, HighlightPulseDuration, color, playerId);
+            MyVisualScriptLogicProvider.SetHighlight(block.Name, true, EnabledThickness, HighlightPulseDuration, color, playerId);
         }
 
         private static void DisableHighlight(MyCubeBlock block, long playerId, Color color)
         {
-            MyVisualScriptLogicProvider.SetHighlight(block.Name, false, -1, HighlightPulseDuration, color, playerId);
+            MyVisualScriptLogicProvider.SetHighlight(block.Name, false, DisabledThickness, HighlightPulseDuration, color, playerId);
         }
 
         private void DisableHighlights(HashSet<HighlightedBlocks> hBlocks)

@@ -152,6 +152,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
+    <None Include="Mod\HostileTakeover\modinfo.sbmi.dev" />
     <None Include="Mod\HostileTakeover\modinfo.sbmi" />
   </ItemGroup>
   <ItemGroup>

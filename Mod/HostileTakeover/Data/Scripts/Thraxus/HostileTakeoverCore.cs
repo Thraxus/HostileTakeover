@@ -244,8 +244,9 @@ namespace HostileTakeover
 
 		private void RunGrinderLogic(IMyAngleGrinder grinder)
         {
-            List<MyEntity> entList = GrabNearbyGrids(grinder.GetPosition());
-            WriteGeneral(nameof(RunGrinderLogic), $"Grinder: [{grinder.OwnerIdentityId:000000000000000000}] [{grinder.OwnerId:000000000000000000}] [{entList.Count:00}]");
+            IMyEntity entityById = MyAPIGateway.Entities.GetEntityById(grinder.OwnerId);
+            List<MyEntity> entList = GrabNearbyGrids(entityById?.GetPosition() ?? grinder.GetPosition());
+            WriteGeneral(nameof(RunGrinderLogic), $"Grinder: [{grinder.OwnerIdentityId:000000000000000000}] [{grinder.OwnerId:000000000000000000}] [{entList.Count:00}] [{grinder.GetPosition()}] [{entityById?.GetPosition()}]");
             PrintConstructMap();
             foreach (MyEntity target in entList)
             {
