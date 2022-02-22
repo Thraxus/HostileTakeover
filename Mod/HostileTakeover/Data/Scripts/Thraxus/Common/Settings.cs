@@ -3,7 +3,7 @@ using Sandbox.ModAPI;
 
 namespace HostileTakeover.Common
 {
-	public static class Settings
+	public static class References
 	{   // These settings should be used by the mod directly, and not changeable by a user.  They are considered "reference only"
 
 		public const string MyIniFileName = "MyCustomIniName.ini";

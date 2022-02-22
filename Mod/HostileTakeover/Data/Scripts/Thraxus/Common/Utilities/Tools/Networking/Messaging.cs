@@ -14,14 +14,14 @@ namespace HostileTakeover.Common.Utilities.Tools.Networking
 		public static void Register()
 		{
 			//MyAPIGateway.Multiplayer.RegisterMessageHandler(Settings.NetworkId, MessageHandler);
-			MyAPIGateway.Multiplayer.RegisterSecureMessageHandler(Settings.NetworkId, MessageHandler);
+			MyAPIGateway.Multiplayer.RegisterSecureMessageHandler(References.NetworkId, MessageHandler);
 			MyAPIGateway.Utilities.MessageEntered += ChatMessageHandler;
 		}
 
 		public static void UnRegister()
 		{
 			//MyAPIGateway.Multiplayer.UnregisterMessageHandler(Settings.NetworkId, MessageHandler);
-			MyAPIGateway.Multiplayer.UnregisterSecureMessageHandler(Settings.NetworkId, MessageHandler);
+			MyAPIGateway.Multiplayer.UnregisterSecureMessageHandler(References.NetworkId, MessageHandler);
 			lock (_playerCache)
 			{
 				_playerCache = null;
@@ -44,7 +44,7 @@ namespace HostileTakeover.Common.Utilities.Tools.Networking
 		private static void MessageHandler(byte[] bytes)
 		{
 			MessageBase m = MyAPIGateway.Utilities.SerializeFromBinary<MessageBase>(bytes);
-			if (Settings.IsServer)
+			if (References.IsServer)
 				m.HandleServer();
 			else
 				m.HandleClient();
@@ -66,7 +66,7 @@ namespace HostileTakeover.Common.Utilities.Tools.Networking
 			byte[] d = MyAPIGateway.Utilities.SerializeToBinary(message);
 			if (!reliable && d.Length >= 1000)
 				throw new Exception($"Attempting to send unreliable message beyond message size limits! Message type: {message.GetType()} Content: {string.Join(" ", d)}");
-			MyAPIGateway.Multiplayer.SendMessageTo(Settings.NetworkId, d, steamId, reliable);
+			MyAPIGateway.Multiplayer.SendMessageTo(References.NetworkId, d, steamId, reliable);
 		}
 
 		public static void SendMessageToServer(MessageBase message, bool reliable = true)
@@ -74,7 +74,7 @@ namespace HostileTakeover.Common.Utilities.Tools.Networking
 			byte[] d = MyAPIGateway.Utilities.SerializeToBinary(message);
 			if (!reliable && d.Length >= 1000)
 				throw new Exception($"Attempting to send unreliable message beyond message size limits! Message type: {message.GetType()} Content: {string.Join(" ", d)}");
-			MyAPIGateway.Multiplayer.SendMessageToServer(Settings.NetworkId, d, reliable);
+			MyAPIGateway.Multiplayer.SendMessageToServer(References.NetworkId, d, reliable);
 		}
 
 		public static void SendMessageToClients(MessageBase message, bool reliable = true, params ulong[] ignore)
@@ -91,7 +91,7 @@ namespace HostileTakeover.Common.Utilities.Tools.Networking
 					ulong steamId = player.SteamUserId;
 					if (ignore?.Contains(steamId) == true)
 						continue;
-					MyAPIGateway.Multiplayer.SendMessageTo(Settings.NetworkId, d, steamId, reliable);
+					MyAPIGateway.Multiplayer.SendMessageTo(References.NetworkId, d, steamId, reliable);
 				}
 				_playerCache.Clear();
 			}
@@ -103,7 +103,7 @@ namespace HostileTakeover.Common.Utilities.Tools.Networking
 		/// <param name="message">The message to send</param>
 		/// <param name="duration">Optional. How long to display the message for</param>
 		/// <param name="color">Optional.  Color of the sender's name in chat - remember to check it against MyFontEnum else, errors</param>
-		public static void ShowLocalNotification(string message, int duration = Settings.DefaultLocalMessageDisplayTime, string color = MyFontEnum.Green)
+		public static void ShowLocalNotification(string message, int duration = References.DefaultLocalMessageDisplayTime, string color = MyFontEnum.Green)
 		{
 			MyVisualScriptLogicProvider.ShowNotification(message, duration, color);
 		}
@@ -114,7 +114,7 @@ namespace HostileTakeover.Common.Utilities.Tools.Networking
 		/// <param name="message">Message to send</param>
 		/// <param name="duration">Optional. How long to display the message for</param>
 		/// <param name="color">Optional. Color to send the message in</param>
-		public static void SendMessageToServer(string message, int duration = Settings.DefaultServerMessageDisplayTime, string color = MyFontEnum.Red)
+		public static void SendMessageToServer(string message, int duration = References.DefaultServerMessageDisplayTime, string color = MyFontEnum.Red)
 		{
 			MyVisualScriptLogicProvider.ShowNotificationToAll(message, duration, color);
 		}

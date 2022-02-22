@@ -69,7 +69,7 @@ namespace HostileTakeover.Models
         /// <summary>
         /// Time a block should be highlighted for
         /// </summary>
-        private const long HighlightDuration = Common.Settings.TicksPerSecond * 60;
+        private const long HighlightDuration = Common.References.TicksPerSecond * 60;
 
         private const int HighlightPulseDuration = 120;
 

@@ -29,9 +29,9 @@ namespace HostileTakeover.Common.BaseClasses
 				case CompType.Both:
 					return false;
 				case CompType.Client:
-					return Settings.IsServer;
+					return References.IsServer;
 				case CompType.Server:
-					return !Settings.IsServer;
+					return !References.IsServer;
 				default:
 					return false;
 			}
@@ -76,7 +76,7 @@ namespace HostileTakeover.Common.BaseClasses
 		{
 			_superEarlySetupComplete = true;
 			_generalLog = new Log(CompName);
-			WriteGeneral("SuperEarlySetup", $"Waking up.  Is Server: {Settings.IsServer}");
+			WriteGeneral("SuperEarlySetup", $"Waking up.  Is Server: {References.IsServer}");
 		}
 
 		/// <summary>
@@ -122,10 +122,10 @@ namespace HostileTakeover.Common.BaseClasses
 			if (TickCounter % 2 == 0) BeforeSimUpdate2Ticks();
 			if (TickCounter % 10 == 0) BeforeSimUpdate5Ticks();
 			if (TickCounter % 20 == 0) BeforeSimUpdate10Ticks();
-			if (TickCounter % (Settings.TicksPerSecond / 2) == 0) BeforeSimUpdateHalfSecond();
-			if (TickCounter % Settings.TicksPerSecond == 0) BeforeSimUpdate1Second();
-			if (TickCounter % (Settings.TicksPerSecond * 30) == 0) BeforeSimUpdate30Seconds();
-			if (TickCounter % (Settings.TicksPerMinute) == 0) BeforeSimUpdate1Minute();
+			if (TickCounter % (References.TicksPerSecond / 2) == 0) BeforeSimUpdateHalfSecond();
+			if (TickCounter % References.TicksPerSecond == 0) BeforeSimUpdate1Second();
+			if (TickCounter % (References.TicksPerSecond * 30) == 0) BeforeSimUpdate30Seconds();
+			if (TickCounter % (References.TicksPerMinute) == 0) BeforeSimUpdate1Minute();
 		}
 
 		protected virtual void BeforeSimUpdate() { }
