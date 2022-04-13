@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>HostileTakeover</RootNamespace>
     <AssemblyName>HostileTakeover</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <TargetFrameworkProfile />
@@ -119,7 +119,7 @@
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\BaseClasses\BaseGameLogicComp.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\BaseClasses\BaseLoggingClass.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\BaseClasses\BaseSessionComp.cs" />
-    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\CommonCore.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\BaseClasses\BaseXmlUserSettings.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Enums\CompType.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Enums\FactionRelationship.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Enums\LogType.cs" />
@@ -130,8 +130,11 @@
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Interfaces\ICommon.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Models\BufferedBinaryReader.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Models\FastQueue.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Reporting\ExistingFactions.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Reporting\GameSettings.cs" />
-    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Settings.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Reporting\InstalledMods.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Reporting\StoredItentities.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\References.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\FileHandlers\Load.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\FileHandlers\Save.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Statics\Statics.cs" />

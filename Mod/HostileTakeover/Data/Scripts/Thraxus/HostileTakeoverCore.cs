@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using HostileTakeover.Common.BaseClasses;
 using HostileTakeover.Common.Enums;
 using HostileTakeover.Common.Factions.Models;
@@ -8,11 +9,13 @@ using HostileTakeover.Models;
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using Sandbox.ModAPI.Weapons;
+using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 using VRage.ModAPI;
 using VRageMath;
+using Settings = HostileTakeover.Common.BaseClasses.Settings;
 
 namespace HostileTakeover
 {
@@ -44,6 +47,8 @@ namespace HostileTakeover
 
         private const double DetectionRange = 150;
 
+        private Settings _settings;
+
         private void PopulateGridList(IMyCubeGrid thisGrid)
 		{
 			_reusableGridCollection.Clear();
@@ -53,6 +58,7 @@ namespace HostileTakeover
 		protected override void SuperEarlySetup()
 		{
 			base.SuperEarlySetup();
+            _settings = new Settings(ModContext.ModName);
 			MyAPIGateway.Entities.OnEntityAdd += OnEntityAdd;
 		}
 

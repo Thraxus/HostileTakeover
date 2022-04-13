@@ -6,14 +6,9 @@ namespace HostileTakeover.Common
 	public static class References
 	{   // These settings should be used by the mod directly, and not changeable by a user.  They are considered "reference only"
 
-		public const string MyIniFileName = "MyCustomIniName.ini";
-		public const string SaveFileName = "MyCustomSave.file";
-		public const string SandboxVariableName = "MyCustomSandboxVariableName";
-
-		public const string ChatCommandPrefix = "chatCommand";
-		public const string ExceptionLogName = "Exception";
-		public const string StaticGeneralLogName = "StaticLog";
-		public const ushort NetworkId = 16759;
+		//public const string ChatCommandPrefix = "chatCommand";
+		//public const string ExceptionLogName = "Exception";
+		//public const ushort NetworkId = 16759;
 
 		#region Reference Values
 

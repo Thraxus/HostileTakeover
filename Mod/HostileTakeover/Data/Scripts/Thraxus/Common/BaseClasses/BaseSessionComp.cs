@@ -1,4 +1,5 @@
-﻿using HostileTakeover.Common.Enums;
+﻿using System.Text;
+using HostileTakeover.Common.Enums;
 using HostileTakeover.Common.Utilities.Tools.Logging;
 using Sandbox.ModAPI;
 using VRage.Game;
@@ -86,6 +87,17 @@ namespace HostileTakeover.Common.BaseClasses
 		{
 			if (BlockUpdates()) return;
 			base.BeforeStart();
+			BasicInformationDump();
+		}
+
+        private void BasicInformationDump()
+        {
+            StringBuilder sb = new StringBuilder();
+            Reporting.GameSettings.Report(sb);
+            Reporting.InstalledMods.Report(sb);
+            Reporting.ExistingFactions.Report(sb);
+            Reporting.StoredIdentities.Report(sb);
+			WriteGeneral(sb.ToString());
 		}
 
 		/// <summary>
