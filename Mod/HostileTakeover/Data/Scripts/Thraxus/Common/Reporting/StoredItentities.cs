@@ -12,9 +12,10 @@ namespace HostileTakeover.Common.Reporting
 		{
             sb.AppendLine();
 			sb.AppendFormat("{0, -2}Stored Identities", " ");
-			sb.AppendFormat("{0, -2}{1,-20}", " ", "_");
-			
-            var identityList = new List<IMyIdentity>();
+            sb.AppendLine("__________________________________________________");
+            sb.AppendLine();
+
+			var identityList = new List<IMyIdentity>();
 			
             MyAPIGateway.Players.GetAllIdentites(identityList);
 
@@ -22,8 +23,8 @@ namespace HostileTakeover.Common.Reporting
 			sb.AppendFormat("{0, -4}[IdentityId][Dead][SteamID > 0] Display Name\n", " ");
             foreach (IMyIdentity identity in identityList)
                 sb.AppendFormat("{0, -4}[{1:D18}][{2}][{3}] {4}\n", " ", identity.IdentityId, identity.IsDead.ToSingleChar(), (MyAPIGateway.Players.TryGetSteamId(identity.IdentityId) > 0).ToSingleChar(), identity.DisplayName);
-			
-			return sb;
+
+            return sb;
 		}
 	}
 }

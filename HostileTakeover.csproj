@@ -116,10 +116,34 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\BaseClasses\BaseController.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\BaseClasses\BaseFactory.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\BaseClasses\BaseGameLogicComp.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\BaseClasses\BaseLoggingClass.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\BaseClasses\BaseSessionComp.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\BaseClasses\BaseXmlUserSettings.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Generics\ActionQueue.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Generics\ObjectPool.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Interfaces\IClose.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Interfaces\ILog.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Interfaces\IReset.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Controllers\BlockController.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Controllers\EntityController.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Models\Construct.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Controllers\GrinderController.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Controllers\HighlightController.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Controllers\OwnershipController.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Enums\HighlightTypes.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Extensions\MyCubeBlockExtensions.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Controllers\Controller.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Models\CoreConstruct.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Models\HighlightedBlock.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Models\NpcConstruct.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Models\PlayerConstruct.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\References\HighlightSettings.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\References\Settings\DefaultSettings.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\References\Settings\SettingsController.cs" />
+    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\References\Settings\UserSettings.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Enums\CompType.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Enums\FactionRelationship.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Enums\LogType.cs" />
@@ -149,8 +173,6 @@
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Tools\OnScreenDisplay\QuestScreen.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Common\Utilities\Tools\Profiler.cs" />
     <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\HostileTakeoverCore.cs" />
-    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\Models\Construct.cs" />
-    <Compile Include="Mod\HostileTakeover\Data\Scripts\Thraxus\References\ImportantBlocks.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -162,5 +184,6 @@
     <Content Include="Mod\HostileTakeover\metadata.mod" />
     <Content Include="Mod\HostileTakeover\Thumb.jpg" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

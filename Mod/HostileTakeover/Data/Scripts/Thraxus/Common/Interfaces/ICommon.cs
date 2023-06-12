@@ -13,6 +13,6 @@ namespace HostileTakeover.Common.Interfaces
 
 		void Close();
 
-		void WriteToLog(string caller, string message);
+		void WriteGeneral(string caller, string message);
 	}
 }

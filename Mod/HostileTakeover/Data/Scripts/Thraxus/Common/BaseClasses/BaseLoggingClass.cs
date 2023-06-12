@@ -19,7 +19,7 @@ namespace HostileTakeover.Common.BaseClasses
 
 		public virtual void Update(ulong tick) { }
 
-		public virtual void WriteToLog(string caller, string message)
+		public virtual void WriteGeneral(string caller, string message)
 		{
 			OnWriteToLog?.Invoke(caller, message);
 		}

@@ -15,8 +15,6 @@ namespace HostileTakeover.Common.BaseClasses
 
 		protected abstract MyUpdateOrder Schedule { get; }
 
-		internal long TickCounter;
-
 		private Log _generalLog;
 
 		private bool _superEarlySetupComplete;
@@ -92,7 +90,7 @@ namespace HostileTakeover.Common.BaseClasses
 
         private void BasicInformationDump()
         {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             Reporting.GameSettings.Report(sb);
             Reporting.InstalledMods.Report(sb);
             Reporting.ExistingFactions.Report(sb);
@@ -124,37 +122,10 @@ namespace HostileTakeover.Common.BaseClasses
 			if (BlockUpdates()) return;
 			base.UpdateBeforeSimulation();
 			if (!_lateSetupComplete) LateSetup();
-			RunBeforeSimUpdate();
+            UpdateBeforeSim();
 		}
 
-		private void RunBeforeSimUpdate()
-		{
-			TickCounter++;
-			BeforeSimUpdate();
-			if (TickCounter % 2 == 0) BeforeSimUpdate2Ticks();
-			if (TickCounter % 10 == 0) BeforeSimUpdate5Ticks();
-			if (TickCounter % 20 == 0) BeforeSimUpdate10Ticks();
-			if (TickCounter % (References.TicksPerSecond / 2) == 0) BeforeSimUpdateHalfSecond();
-			if (TickCounter % References.TicksPerSecond == 0) BeforeSimUpdate1Second();
-			if (TickCounter % (References.TicksPerSecond * 30) == 0) BeforeSimUpdate30Seconds();
-			if (TickCounter % (References.TicksPerMinute) == 0) BeforeSimUpdate1Minute();
-		}
-
-		protected virtual void BeforeSimUpdate() { }
-
-		protected virtual void BeforeSimUpdate2Ticks() { }
-
-		protected virtual void BeforeSimUpdate5Ticks() { }
-
-		protected virtual void BeforeSimUpdate10Ticks() { }
-
-		protected virtual void BeforeSimUpdateHalfSecond() { }
-
-		protected virtual void BeforeSimUpdate1Second() { }
-
-		protected virtual void BeforeSimUpdate30Seconds() { }
-
-		protected virtual void BeforeSimUpdate1Minute() { }
+		protected virtual void UpdateBeforeSim() { }
 
 		protected virtual void LateSetup()
 		{
@@ -170,20 +141,11 @@ namespace HostileTakeover.Common.BaseClasses
 		public override void UpdateAfterSimulation()
 		{
 			if (BlockUpdates()) return;
-			AfterSimUpdate();
-            if (TickCounter % 2 == 0) AfterSimUpdate2Ticks();
-            if (TickCounter % 10 == 0) AfterSimUpdate5Ticks();
-            if (TickCounter % 20 == 0) AfterSimUpdate10Ticks();
-			base.UpdateAfterSimulation();
-		}
+            base.UpdateAfterSimulation();
+			UpdateAfterSim();
+        }
 
-        protected virtual void AfterSimUpdate() { }
-
-        protected virtual void AfterSimUpdate2Ticks() { }
-							   
-        protected virtual void AfterSimUpdate5Ticks() { }
-							   
-        protected virtual void AfterSimUpdate10Ticks() { }
+        protected virtual void UpdateAfterSim() { }
 
 		protected override void UnloadData()
 		{
@@ -203,7 +165,7 @@ namespace HostileTakeover.Common.BaseClasses
 		/// </summary>
 		public override void HandleInput()
 		{
-
+			base.HandleInput();
 		}
 
 		/// <summary>
@@ -212,7 +174,7 @@ namespace HostileTakeover.Common.BaseClasses
 		/// </summary>
 		public override void Simulate()
 		{
-
+			base.Simulate();
 		}
 
 		/// <summary>
@@ -221,7 +183,7 @@ namespace HostileTakeover.Common.BaseClasses
 		/// </summary>
 		public override void Draw()
 		{
-
+			base.Draw();
 		}
 
 		/// <summary>
@@ -229,7 +191,7 @@ namespace HostileTakeover.Common.BaseClasses
 		/// </summary>
 		public override void UpdatingStopped()
 		{
-
+			base.UpdatingStopped();
 		}
 
 

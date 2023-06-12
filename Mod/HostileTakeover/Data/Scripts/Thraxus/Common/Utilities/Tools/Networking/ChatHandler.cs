@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Sandbox.ModAPI;
-using VRage.Game.ModAPI;
-
-namespace HostileTakeover.Common.Utilities.Tools.Networking
+﻿namespace HostileTakeover.Common.Utilities.Tools.Networking
 {
 	internal static class ChatHandler
 	{
